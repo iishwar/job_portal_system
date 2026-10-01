@@ -5,12 +5,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'job_portal_super_jwt_secret_token_
 export const TOKEN_COOKIE_NAME = 'job_portal_token';
 
 export function signToken(payload) {
+    const userId = payload.user_id || payload.id;
     return jwt.sign(
         {
-            id: payload.id,
+            user_id: userId,
+            id: userId,
             email: payload.email,
             name: payload.name,
-            title: payload.title || 'Software Engineer',
+            role: payload.role || 'JOB_SEEKER',
         },
         JWT_SECRET,
         { expiresIn: '7d' }

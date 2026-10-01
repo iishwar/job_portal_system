@@ -1,5 +1,5 @@
-"use client"
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+"use client";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     X,
@@ -22,11 +22,17 @@ import {
     RotateCcw,
     DollarSign,
     Building,
-    Flag,
     Send,
     CheckCircle2,
     FileText,
-    Bell
+    Bell,
+    PlusCircle,
+    Layers,
+    Users,
+    Clock,
+    Globe,
+    Link as LinkIcon,
+    AlertCircle
 } from 'lucide-react';
 
 const styles = `
@@ -50,6 +56,12 @@ const styles = `
     --blue-soft: #EAF0FE;
     --violet: #7C5CFF;
     --violet-soft: #F1EDFF;
+    --emerald: #10B981;
+    --emerald-soft: #ECFDF5;
+    --amber: #F59E0B;
+    --amber-soft: #FFFBEB;
+    --rose: #EF4444;
+    --rose-soft: #FEF2F2;
     --line: #E4E1EC;
     --line-strong: #D4D0E0;
     --blue-dot: rgba(255, 255, 255, 0.22);
@@ -73,7 +85,7 @@ const styles = `
 
   .nav {
     border-bottom: 1px solid var(--line);
-    background: var(--paper);
+    background: var(--panel);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -82,7 +94,7 @@ const styles = `
   .nav__inner {
     max-width: 1240px;
     margin: 0 auto;
-    padding: 18px 32px;
+    padding: 16px 32px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -93,6 +105,7 @@ const styles = `
     align-items: center;
     gap: 12px;
     flex-shrink: 0;
+    cursor: pointer;
   }
 
   .nav__logo-icon {
@@ -122,7 +135,7 @@ const styles = `
 
   .nav__links {
     display: flex;
-    gap: 32px;
+    gap: 24px;
     align-items: center;
     flex-shrink: 0;
   }
@@ -142,7 +155,6 @@ const styles = `
   }
 
   .nav__links a:hover,
-  .nav__links a:focus-visible,
   .nav__link-btn:hover {
     color: var(--ink);
   }
@@ -150,7 +162,7 @@ const styles = `
   .nav__right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     position: relative;
     flex-shrink: 0;
   }
@@ -205,7 +217,7 @@ const styles = `
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(20, 18, 28, 0.08);
+    box-shadow: 0 10px 30px rgba(20, 18, 28, 0.12);
     overflow: hidden;
     z-index: 200;
     animation: fadeIn 0.15s ease-out;
@@ -232,6 +244,18 @@ const styles = `
   .profile__dropdown-email {
     font-size: 12px;
     color: var(--ink-faint);
+  }
+
+  .profile__dropdown-role {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--blue-soft);
+    color: var(--blue);
+    margin-top: 4px;
   }
 
   .profile__dropdown-body {
@@ -314,7 +338,7 @@ const styles = `
   }
 
   .hero__title {
-    font-size: 40px;
+    font-size: 38px;
     line-height: 1.15;
     font-weight: 800;
     letter-spacing: -0.025em;
@@ -401,10 +425,10 @@ const styles = `
   }
 
   .btn {
-    font-size: 14.5px;
+    font-size: 14px;
     font-weight: 600;
-    padding: 12px 24px;
-    border-radius: 9px;
+    padding: 10px 20px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -413,7 +437,7 @@ const styles = `
     border: none;
     flex-shrink: 0;
     white-space: nowrap;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    transition: all 0.15s ease;
   }
 
   .btn:active {
@@ -421,21 +445,21 @@ const styles = `
   }
 
   .btn--primary {
-    background: var(--violet);
+    background: var(--blue);
     color: #FFFFFF;
   }
 
   .btn--primary:hover {
-    background: #6A48F0;
+    background: #2D5EC9;
   }
 
-  .btn--dark {
-    background: var(--ink);
+  .btn--violet {
+    background: var(--violet);
     color: #FFFFFF;
   }
 
-  .btn--dark:hover {
-    background: var(--blue);
+  .btn--violet:hover {
+    background: #6A48F0;
   }
 
   .btn--ghost {
@@ -448,89 +472,6 @@ const styles = `
     border-color: var(--line-strong);
     color: var(--ink);
     background: var(--paper);
-  }
-
-  .search__suggestions {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    right: 0;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    box-shadow: 0 12px 36px rgba(20, 18, 28, 0.12);
-    max-height: 280px;
-    overflow-y: auto;
-    z-index: 150;
-    padding: 6px;
-    animation: fadeIn 0.15s ease-out;
-  }
-
-  .search__suggestions-header {
-    padding: 8px 12px 4px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--ink-faint);
-  }
-
-  .search__suggestion-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--ink);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.12s ease;
-  }
-
-  .search__suggestion-item:hover, .search__suggestion-item--active {
-    background: var(--blue-soft);
-    color: var(--blue);
-  }
-
-  .search__suggestion-tag {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    background: var(--paper);
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-
-  .search__pills {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 16px;
-    flex-wrap: wrap;
-  }
-
-  .search__pills-label {
-    font-size: 12px;
-    color: var(--on-blue-faint);
-    font-weight: 500;
-  }
-
-  .search__pill {
-    font-size: 12px;
-    font-weight: 500;
-    padding: 4px 12px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.15);
-    color: #FFFFFF;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .search__pill:hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: #FFFFFF;
   }
 
   .main__container {
@@ -591,7 +532,7 @@ const styles = `
   .filter__group {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .filter__label {
@@ -609,7 +550,7 @@ const styles = `
     font-weight: 600;
   }
 
-  .select__input {
+  .select__input, .text__input {
     width: 100%;
     padding: 10px 12px;
     font-size: 13.5px;
@@ -623,8 +564,8 @@ const styles = `
     transition: border-color 0.15s ease;
   }
 
-  .select__input:focus, .select__input:hover {
-    border-color: var(--line-strong);
+  .select__input:focus, .text__input:focus {
+    border-color: var(--blue);
   }
 
   .range__input {
@@ -639,27 +580,6 @@ const styles = `
     font-size: 12px;
     color: var(--ink-faint);
     font-weight: 500;
-  }
-
-  .india__section {
-    background: var(--violet-soft);
-    border: 1px solid rgba(124, 92, 255, 0.25);
-    border-radius: 10px;
-    padding: 14px;
-    margin-top: 4px;
-    animation: fadeIn 0.2s ease-out;
-  }
-
-  .india__badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--violet);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 8px;
   }
 
   .checkbox__group {
@@ -792,10 +712,6 @@ const styles = `
     transform: translateY(-2px);
   }
 
-  .job__card--featured {
-    border-left: 4px solid var(--violet);
-  }
-
   .job__card-top {
     display: flex;
     align-items: flex-start;
@@ -806,84 +722,107 @@ const styles = `
   .job__card-company-info {
     display: flex;
     align-items: center;
-    gap: 16px;
-    min-width: 0;
-    flex: 1;
+    gap: 14px;
   }
 
   .job__company-logo {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--blue);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 800;
-    font-size: 18px;
-    color: #FFFFFF;
     flex-shrink: 0;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
   }
 
   .job__details {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    min-width: 0;
+    gap: 2px;
   }
 
   .job__title {
-    font-size: 18px;
+    margin: 0;
+    font-size: 17px;
     font-weight: 700;
     color: var(--ink);
-    margin: 0;
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 10px;
+    gap: 8px;
   }
 
   .job__company-name {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13.5px;
+    font-weight: 500;
     color: var(--ink-soft);
   }
 
   .job__save-btn {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--ink-faint);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    color: var(--ink-faint);
     transition: all 0.15s ease;
-    flex-shrink: 0;
   }
 
   .job__save-btn:hover {
-    border-color: var(--blue);
-    color: var(--blue);
-    background: var(--blue-soft);
+    background: var(--paper);
+    color: var(--violet);
   }
 
   .job__save-btn--active {
-    background: var(--violet-soft);
-    border-color: var(--violet);
     color: var(--violet);
   }
 
   .job__meta {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
     flex-wrap: wrap;
-    font-size: 13.5px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--ink-soft);
+  }
+
+  .job__salary-badge {
+    background: var(--emerald-soft);
+    color: var(--emerald);
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .job__mode-tag {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .job__mode-tag--REMOTE {
+    background: #E8F5E9;
+    color: #2E7D32;
+  }
+
+  .job__mode-tag--HYBRID {
+    background: var(--violet-soft);
+    color: var(--violet);
+  }
+
+  .job__mode-tag--ONSITE {
+    background: var(--blue-soft);
+    color: var(--blue);
   }
 
   .job__meta-item {
@@ -892,101 +831,52 @@ const styles = `
     gap: 6px;
   }
 
-  .job__salary-badge {
-    font-weight: 700;
-    color: #2E7D32;
-    background: #E8F5E9;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 13px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .job__mode-tag {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 999px;
-  }
-
-  .job__mode-tag--OnSite {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    color: var(--ink-soft);
-  }
-
-  .job__mode-tag--Remote {
-    background: var(--blue-soft);
-    color: var(--blue);
-  }
-
-  .job__mode-tag--Hybrid {
-    background: var(--violet-soft);
-    color: var(--violet);
-  }
-
-  .job__tags {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .job__tag {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--ink-soft);
-    background: var(--paper);
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--line);
-  }
-
   .job__card-bottom {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding-top: 14px;
     border-top: 1px solid var(--line);
+    margin-top: 2px;
   }
 
   .job__posted {
-    font-size: 12.5px;
+    font-size: 12px;
     color: var(--ink-faint);
+    font-weight: 500;
   }
 
   .job__apply-btn {
-    font-size: 14px;
-    font-weight: 600;
-    padding: 9px 20px;
-    border-radius: 8px;
-    background: var(--ink);
+    background: var(--blue);
     color: #FFFFFF;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
     border: none;
     cursor: pointer;
-    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     gap: 6px;
+    transition: all 0.15s ease;
   }
 
   .job__apply-btn:hover {
-    background: var(--blue);
-    box-shadow: 0 4px 12px rgba(59, 111, 224, 0.25);
+    background: #2D5EC9;
   }
 
   .job__apply-btn--applied {
-    background: #E8F5E9;
-    color: #2E7D32;
+    background: var(--emerald-soft);
+    color: var(--emerald);
     cursor: default;
+    border: 1px solid rgba(16, 185, 129, 0.2);
   }
 
   .empty__state {
     background: var(--panel);
-    border: 1px dashed var(--line-strong);
+    border: 1px solid var(--line);
     border-radius: 14px;
-    padding: 56px 24px;
+    padding: 48px 24px;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -998,13 +888,12 @@ const styles = `
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: var(--blue-soft);
-    color: var(--blue);
+    background: var(--paper);
+    color: var(--ink-faint);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
 
   .empty__title {
@@ -1017,61 +906,50 @@ const styles = `
   .empty__subtitle {
     font-size: 14px;
     color: var(--ink-soft);
-    max-width: 360px;
     margin: 0 0 12px;
+    max-width: 440px;
+    line-height: 1.5;
   }
 
   .modal__overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(20, 18, 28, 0.5);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 500;
     padding: 20px;
     animation: fadeIn 0.15s ease-out;
   }
 
   .modal__content {
     background: var(--panel);
+    border-radius: 14px;
     border: 1px solid var(--line);
-    border-radius: 16px;
     width: 100%;
-    max-width: 520px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    max-width: 540px;
+    box-shadow: 0 20px 40px rgba(20, 18, 28, 0.2);
     overflow: hidden;
-    animation: slideUp 0.2s ease-out;
+    animation: scaleUp 0.15s ease-out;
   }
 
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes scaleUp {
+    from { transform: scale(0.96); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
   }
 
   .modal__header {
     padding: 20px 24px;
     border-bottom: 1px solid var(--line);
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    background: var(--paper);
-  }
-
-  .modal__header > div:first-child {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
   }
 
   .modal__title {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     color: var(--ink);
     margin: 0;
@@ -1083,14 +961,13 @@ const styles = `
     color: var(--ink-faint);
     cursor: pointer;
     padding: 4px;
-    border-radius: 50%;
+    border-radius: 6px;
     display: flex;
-    flex-shrink: 0;
   }
 
   .modal__close:hover {
     color: var(--ink);
-    background: var(--line);
+    background: var(--paper);
   }
 
   .modal__body {
@@ -1098,6 +975,18 @@ const styles = `
     display: flex;
     flex-direction: column;
     gap: 16px;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+
+  .modal__footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--line);
+    background: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
   }
 
   .form__group {
@@ -1112,30 +1001,21 @@ const styles = `
     color: var(--ink);
   }
 
-  .form__input, .form__textarea {
+  .form__input, .form__textarea, .form__select {
     width: 100%;
-    padding: 10px 14px;
+    padding: 10px 12px;
     font-size: 14px;
+    color: var(--ink);
+    background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 8px;
     outline: none;
     font-family: inherit;
-    color: var(--ink);
-    background: var(--panel);
+    transition: border-color 0.15s ease;
   }
 
-  .form__input:focus, .form__textarea:focus {
+  .form__input:focus, .form__textarea:focus, .form__select:focus {
     border-color: var(--blue);
-    box-shadow: 0 0 0 3px var(--blue-soft);
-  }
-
-  .modal__footer {
-    padding: 16px 24px;
-    border-top: 1px solid var(--line);
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    background: var(--paper);
   }
 
   .toast {
@@ -1146,309 +1026,39 @@ const styles = `
     color: #FFFFFF;
     padding: 12px 20px;
     border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    z-index: 2000;
-    animation: fadeIn 0.2s ease-out;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    animation: slideUp 0.2s ease-out;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
   .toast__icon {
-    color: #4CAF50;
+    color: var(--emerald);
   }
 
-  @media (max-width: 960px) {
+  @media (max-width: 900px) {
     .main__container {
       grid-template-columns: 1fr;
     }
     .sidebar {
       position: static;
     }
-    .nav__links {
-      display: none;
-    }
-    .hero__title {
-      font-size: 32px;
-    }
   }
 `;
 
-const JOB_ROLES = [
-    "Software Engineer",
-    "Frontend Developer",
-    "Backend Developer",
-    "Full Stack Engineer",
-    "DevOps Engineer",
-    "Data Scientist",
-    "Product Manager",
-    "UI/UX Designer",
-    "Mobile App Engineer",
-    "QA Automation Engineer",
-    "Cloud Architect",
-    "AI/ML Engineer"
-];
-
-const COUNTRIES = [
-    "All Countries",
-    "India",
-    "United States",
-    "United Kingdom",
-    "Canada",
-    "Germany",
-    "Singapore",
-    "Australia"
-];
-
-const INDIAN_STATES = [
-    "All States",
-    "Karnataka",
-    "Maharashtra",
-    "Delhi NCR",
-    "Telangana",
-    "Tamil Nadu",
-    "Haryana",
-    "West Bengal",
-    "Kerala",
-    "Gujarat"
-];
-
-const INITIAL_JOBS = [
-    {
-        id: "job-1",
-        title: "Senior Software Engineer - Frontend",
-        role: "Software Engineer",
-        company: "Google",
-        companyLogo: "G",
-        companyBg: "#4285F4",
-        location: "Bangalore, India",
-        country: "India",
-        state: "Karnataka",
-        salaryRange: "₹28 - ₹42 LPA",
-        salaryMin: 28,
-        salaryMax: 42,
-        jobMode: "Hybrid",
-        tags: ["React", "TypeScript", "System Design", "Performance"],
-        postedTime: "2 hours ago",
-        experience: "4-7 years",
-        description: "Looking for an expert Senior Software Engineer to lead frontend architecture for next-gen search & web products.",
-        featured: true
-    },
-    {
-        id: "job-2",
-        title: "Full Stack Engineer (Node + React)",
-        role: "Full Stack Engineer",
-        company: "Razorpay",
-        companyLogo: "R",
-        companyBg: "#0C2340",
-        location: "Bangalore, India",
-        country: "India",
-        state: "Karnataka",
-        salaryRange: "₹24 - ₹36 LPA",
-        salaryMin: 24,
-        salaryMax: 36,
-        jobMode: "Remote",
-        tags: ["Node.js", "React", "PostgreSQL", "Microservices"],
-        postedTime: "5 hours ago",
-        experience: "3-5 years",
-        description: "Build robust fintech payments infrastructure handling millions of transactions per second across India.",
-        featured: true
-    },
-    {
-        id: "job-3",
-        title: "Backend Software Engineer - Distributed Systems",
-        role: "Backend Developer",
-        company: "Microsoft",
-        companyLogo: "M",
-        companyBg: "#00A4EF",
-        location: "Hyderabad, India",
-        country: "India",
-        state: "Telangana",
-        salaryRange: "₹30 - ₹48 LPA",
-        salaryMin: 30,
-        salaryMax: 48,
-        jobMode: "Hybrid",
-        tags: ["C#", ".NET Core", "Azure", "Distributed Systems"],
-        postedTime: "1 day ago",
-        experience: "5+ years",
-        description: "Scale cloud backend services on Microsoft Azure with low latency and high availability requirements."
-    },
-    {
-        id: "job-4",
-        title: "Staff Software Engineer - Infrastructure",
-        role: "Software Engineer",
-        company: "Swiggy",
-        companyLogo: "S",
-        companyBg: "#FC8019",
-        location: "Gurugram, India",
-        country: "India",
-        state: "Haryana",
-        salaryRange: "₹38 - ₹55 LPA",
-        salaryMin: 38,
-        salaryMax: 55,
-        jobMode: "OnSite",
-        tags: ["Go", "Kubernetes", "Kafka", "AWS"],
-        postedTime: "1 day ago",
-        experience: "6-10 years",
-        description: "Architect high-throughput logistics routing platforms powering hyper-local food delivery."
-    },
-    {
-        id: "job-5",
-        title: "Lead Frontend Engineer",
-        role: "Frontend Developer",
-        company: "Flipkart",
-        companyLogo: "F",
-        companyBg: "#2874F0",
-        location: "Bangalore, India",
-        country: "India",
-        state: "Karnataka",
-        salaryRange: "₹32 - ₹46 LPA",
-        salaryMin: 32,
-        salaryMax: 46,
-        jobMode: "Hybrid",
-        tags: ["Next.js", "Redux", "Web Performance", "Accessibility"],
-        postedTime: "3 hours ago",
-        experience: "5-8 years",
-        description: "Drive the core web shopping application for hundreds of millions of monthly active shoppers."
-    },
-    {
-        id: "job-6",
-        title: "DevOps & SRE Engineer",
-        role: "DevOps Engineer",
-        company: "Zomato",
-        companyLogo: "Z",
-        companyBg: "#CB202D",
-        location: "Gurugram, India",
-        country: "India",
-        state: "Haryana",
-        salaryRange: "₹22 - ₹35 LPA",
-        salaryMin: 22,
-        salaryMax: 35,
-        jobMode: "OnSite",
-        tags: ["Docker", "Kubernetes", "Terraform", "Prometheus"],
-        postedTime: "2 days ago",
-        experience: "3-6 years",
-        description: "Maintain 99.99% uptime for peak delivery traffic with automated CI/CD and observability."
-    },
-    {
-        id: "job-7",
-        title: "AI / ML Engineer - GenAI",
-        role: "AI/ML Engineer",
-        company: "Atlassian",
-        companyLogo: "A",
-        companyBg: "#0052CC",
-        location: "Bangalore, India",
-        country: "India",
-        state: "Karnataka",
-        salaryRange: "₹35 - ₹50 LPA",
-        salaryMin: 35,
-        salaryMax: 50,
-        jobMode: "Remote",
-        tags: ["Python", "PyTorch", "LLMs", "RAG"],
-        postedTime: "4 hours ago",
-        experience: "3-6 years",
-        description: "Build cutting-edge AI features into Jira, Confluence, and developer productivity tools."
-    },
-    {
-        id: "job-8",
-        title: "Senior Product Manager",
-        role: "Product Manager",
-        company: "PhonePe",
-        companyLogo: "P",
-        companyBg: "#5F259F",
-        location: "Mumbai, India",
-        country: "India",
-        state: "Maharashtra",
-        salaryRange: "₹30 - ₹45 LPA",
-        salaryMin: 30,
-        salaryMax: 45,
-        jobMode: "Hybrid",
-        tags: ["Product Strategy", "UPI Payments", "Analytics", "Growth"],
-        postedTime: "1 day ago",
-        experience: "4-8 years",
-        description: "Lead consumer payment experiences and merchant growth engines across Tier 1, 2, 3 cities."
-    },
-    {
-        id: "job-9",
-        title: "Software Engineer - Core Platform",
-        role: "Software Engineer",
-        company: "Uber",
-        companyLogo: "U",
-        companyBg: "#000000",
-        location: "San Francisco, USA",
-        country: "United States",
-        salaryRange: "$140,000 - $190,000 / yr",
-        salaryMin: 35,
-        salaryMax: 60,
-        jobMode: "Hybrid",
-        tags: ["Go", "Java", "Distributed Systems", "gRPC"],
-        postedTime: "6 hours ago",
-        experience: "3-6 years",
-        description: "Build global scale trip dispatching systems handling millions of concurrent requests worldwide."
-    },
-    {
-        id: "job-10",
-        title: "Data Scientist - Personalization",
-        role: "Data Scientist",
-        company: "Spotify",
-        companyLogo: "S",
-        companyBg: "#1DB954",
-        location: "London, UK",
-        country: "United Kingdom",
-        salaryRange: "£75,000 - £110,000 / yr",
-        salaryMin: 30,
-        salaryMax: 50,
-        jobMode: "Remote",
-        tags: ["Python", "Spark", "Recommendation Systems", "A/B Testing"],
-        postedTime: "1 day ago",
-        experience: "4-7 years",
-        description: "Optimize music discovery algorithms and personalized daily mix playlists for 500M+ active listeners."
-    },
-    {
-        id: "job-11",
-        title: "UI/UX Product Designer",
-        role: "UI/UX Designer",
-        company: "CRED",
-        companyLogo: "C",
-        companyBg: "#121212",
-        location: "Bangalore, India",
-        country: "India",
-        state: "Karnataka",
-        salaryRange: "₹20 - ₹32 LPA",
-        salaryMin: 20,
-        salaryMax: 32,
-        jobMode: "OnSite",
-        tags: ["Figma", "Design Systems", "Prototyping", "Micro-interactions"],
-        postedTime: "12 hours ago",
-        experience: "2-5 years",
-        description: "Craft dark-mode luxury UI experiences and tactile design systems for high-trust fintech."
-    },
-    {
-        id: "job-12",
-        title: "iOS Mobile Engineer (Swift)",
-        role: "Mobile App Engineer",
-        company: "Zomato",
-        companyLogo: "Z",
-        companyBg: "#E23744",
-        location: "Delhi NCR, India",
-        country: "India",
-        state: "Delhi NCR",
-        salaryRange: "₹22 - ₹34 LPA",
-        salaryMin: 22,
-        salaryMax: 34,
-        jobMode: "Hybrid",
-        tags: ["Swift", "SwiftUI", "iOS", "Mobile Security"],
-        postedTime: "3 days ago",
-        experience: "3-5 years",
-        description: "Architect fluid mobile order flows, live GPS maps tracking, and high-FPS UI animations."
-    }
-];
-
-function Navbar({ user, savedJobsCount, onOpenSavedJobs, onOpenSettings, onOpenProfile, onLogout }) {
+function Navbar({ user, savedJobsCount, applicationsCount, onOpenSavedJobs, onOpenApplications, onOpenSettings, onOpenPostJob, onOpenEmployerJobs, onLogout }) {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const router = useRouter();
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -1460,10 +1070,12 @@ function Navbar({ user, savedJobsCount, onOpenSavedJobs, onOpenSettings, onOpenP
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const isEmployer = user?.role === 'EMPLOYER' || user?.role === 'ADMIN';
+
     return (
         <nav className="nav" id="top-navbar">
             <div className="nav__inner">
-                <div className="nav__brand">
+                <div className="nav__brand" onClick={() => router.push('/home')}>
                     <div className="nav__logo-icon">
                         <Briefcase size={20} />
                     </div>
@@ -1473,15 +1085,31 @@ function Navbar({ user, savedJobsCount, onOpenSavedJobs, onOpenSettings, onOpenP
                 </div>
 
                 <div className="nav__links">
-                    <a href="#explore">Explore Jobs</a>
-                    <a href="#companies">Companies</a>
-                    <button className="nav__link-btn" onClick={onOpenSavedJobs}>
-                        Saved Jobs
-                        {savedJobsCount > 0 && <span className="badge">{savedJobsCount}</span>}
+                    <button className="nav__link-btn" onClick={() => router.push('/home')}>
+                        Explore Jobs
                     </button>
-                    <button className="nav__link-btn" onClick={onOpenProfile}>
-                        My Profile
-                    </button>
+
+                    {isEmployer ? (
+                        <>
+                            <button className="nav__link-btn" onClick={onOpenEmployerJobs}>
+                                <Layers size={15} /> My Posted Jobs
+                            </button>
+                            <button className="btn btn--violet" style={{ padding: '6px 14px', fontSize: '13px' }} onClick={onOpenPostJob}>
+                                <PlusCircle size={15} /> Post a Job
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button className="nav__link-btn" onClick={onOpenSavedJobs}>
+                                <Bookmark size={15} /> Saved Jobs
+                                {savedJobsCount > 0 && <span className="badge">{savedJobsCount}</span>}
+                            </button>
+                            <button className="nav__link-btn" onClick={onOpenApplications}>
+                                <FileText size={15} /> My Applications
+                                {applicationsCount > 0 && <span className="badge" style={{ background: 'var(--emerald-soft)', color: 'var(--emerald)' }}>{applicationsCount}</span>}
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 <div className="nav__right" ref={dropdownRef}>
@@ -1490,7 +1118,6 @@ function Navbar({ user, savedJobsCount, onOpenSavedJobs, onOpenSettings, onOpenP
                         className="nav__profile-btn"
                         onClick={() => setDropdownOpen(!dropdownOpen)}
                         aria-expanded={dropdownOpen}
-                        aria-haspopup="true"
                     >
                         <div className="nav__avatar">
                             {(user?.name || 'U').charAt(0).toUpperCase()}
@@ -1504,6 +1131,7 @@ function Navbar({ user, savedJobsCount, onOpenSavedJobs, onOpenSettings, onOpenP
                             <div className="profile__dropdown-header">
                                 <div className="profile__dropdown-user">{user?.name || 'User'}</div>
                                 <div className="profile__dropdown-email">{user?.email || ''}</div>
+                                <span className="profile__dropdown-role">{user?.role || 'JOB_SEEKER'}</span>
                             </div>
 
                             <div className="profile__dropdown-body">
@@ -1511,7 +1139,7 @@ function Navbar({ user, savedJobsCount, onOpenSavedJobs, onOpenSettings, onOpenP
                                     className="profile__dropdown-item"
                                     onClick={() => {
                                         setDropdownOpen(false);
-                                        onOpenProfile();
+                                        router.push('/profile');
                                     }}
                                 >
                                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1519,18 +1147,46 @@ function Navbar({ user, savedJobsCount, onOpenSavedJobs, onOpenSettings, onOpenP
                                     </span>
                                 </button>
 
-                                <button
-                                    className="profile__dropdown-item"
-                                    onClick={() => {
-                                        setDropdownOpen(false);
-                                        onOpenSavedJobs();
-                                    }}
-                                >
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Bookmark size={16} /> Saved Jobs
-                                    </span>
-                                    <span className="badge">{savedJobsCount}</span>
-                                </button>
+                                {isEmployer ? (
+                                    <button
+                                        className="profile__dropdown-item"
+                                        onClick={() => {
+                                            setDropdownOpen(false);
+                                            onOpenEmployerJobs();
+                                        }}
+                                    >
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Layers size={16} /> Manage Posted Jobs
+                                        </span>
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            className="profile__dropdown-item"
+                                            onClick={() => {
+                                                setDropdownOpen(false);
+                                                onOpenSavedJobs();
+                                            }}
+                                        >
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Bookmark size={16} /> Saved Jobs
+                                            </span>
+                                            <span className="badge">{savedJobsCount}</span>
+                                        </button>
+                                        <button
+                                            className="profile__dropdown-item"
+                                            onClick={() => {
+                                                setDropdownOpen(false);
+                                                onOpenApplications();
+                                            }}
+                                        >
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FileText size={16} /> My Applications
+                                            </span>
+                                            <span className="badge">{applicationsCount}</span>
+                                        </button>
+                                    </>
+                                )}
 
                                 <button
                                     className="profile__dropdown-item"
@@ -1564,71 +1220,43 @@ function Navbar({ user, savedJobsCount, onOpenSavedJobs, onOpenSettings, onOpenP
     );
 }
 
-function SearchBar({ searchQuery, onSearchChange, onSelectRole }) {
-    const [isFocused, setIsFocused] = useState(false);
-    const containerRef = useRef(null);
-
-    const suggestions = JOB_ROLES.filter((role) =>
-        role.toLowerCase().includes(searchQuery.trim().toLowerCase())
-    );
-
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (containerRef.current && !containerRef.current.contains(e.target)) {
-                setIsFocused(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleSelect = (roleName) => {
-        onSelectRole(roleName);
-        setIsFocused(false);
-    };
-
-    const popularPills = ["Software Engineer", "Frontend Developer", "Backend Developer", "DevOps Engineer", "Data Scientist"];
-
+function SearchBar({ searchQuery, onSearchChange, onSearchSubmit }) {
     return (
         <div className="hero__header">
             <div className="hero__header-inner">
                 <div className="hero__eyebrow">
-                    <Sparkles size={14} /> Over 10,000+ Verified Tech Jobs
+                    <Sparkles size={14} /> Direct Employer Postings & Verified Roles
                 </div>
                 <h1 className="hero__title">
                     Discover Your Next High-Impact Role
                 </h1>
                 <p className="hero__subtitle">
-                    Search software engineering, cloud architecture, and product positions from top tech leaders and fast-growing startups.
+                    Search and apply directly to published tech jobs, distributed roles, and top engineering teams.
                 </p>
 
-                <div className="search__box-container" ref={containerRef}>
+                <form className="search__box-container" onSubmit={(e) => { e.preventDefault(); onSearchSubmit(); }}>
                     <div className="search__box">
-                        <Search className="search__icon" size={20} style={{ flexShrink: 0 }} />
+                        <Search className="search__icon" size={20} />
                         <div className="search__input-wrapper">
-                            <span className="search__label">Job Role or Keyword</span>
+                            <span className="search__label">Search by Title, Company, or Skill</span>
                             <input
                                 id="job-search-input"
                                 type="text"
                                 className="search__input"
-                                placeholder="e.g. Software Engineer, Frontend, DevOps..."
+                                placeholder="e.g. Frontend Engineer, Full Stack, PostgreSQL, Swiggy..."
                                 value={searchQuery}
-                                onChange={(e) => {
-                                    onSearchChange(e.target.value);
-                                    setIsFocused(true);
-                                }}
-                                onFocus={() => setIsFocused(true)}
-                                autoComplete="off"
+                                onChange={(e) => onSearchChange(e.target.value)}
                             />
                         </div>
 
                         {searchQuery && (
                             <button
+                                type="button"
                                 className="search__clear-btn"
                                 title="Clear Search"
                                 onClick={() => {
                                     onSearchChange('');
-                                    setIsFocused(true);
+                                    onSearchSubmit('');
                                 }}
                             >
                                 <X size={16} />
@@ -1637,68 +1265,27 @@ function SearchBar({ searchQuery, onSearchChange, onSelectRole }) {
 
                         <button
                             id="search-submit-btn"
+                            type="submit"
                             className="btn btn--primary"
-                            onClick={() => setIsFocused(false)}
                         >
                             Search Jobs
                         </button>
                     </div>
-
-                    {isFocused && (
-                        <div className="search__suggestions" id="job-role-suggestions">
-                            <div className="search__suggestions-header">
-                                {searchQuery ? 'Matching Job Roles' : 'Suggested Roles'}
-                            </div>
-                            {suggestions.length > 0 ? (
-                                suggestions.map((role) => (
-                                    <div
-                                        key={role}
-                                        className="search__suggestion-item"
-                                        onClick={() => handleSelect(role)}
-                                    >
-                                        <span>{role}</span>
-                                        <span className="search__suggestion-tag">
-                                            Role <ChevronRight size={12} style={{ display: 'inline', marginLeft: '2px' }} />
-                                        </span>
-                                    </div>
-                                ))
-                            ) : (
-                                <div style={{ padding: '12px', fontSize: '13px', color: 'var(--ink-faint)', fontStyle: 'italic' }}>
-                                    No predefined role matched "{searchQuery}". Select or search any custom term!
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <div className="search__pills">
-                    <span className="search__pills-label">Popular Searches:</span>
-                    {popularPills.map((pill) => (
-                        <button
-                            key={pill}
-                            className="search__pill"
-                            onClick={() => handleSelect(pill)}
-                        >
-                            {pill}
-                        </button>
-                    ))}
-                </div>
+                </form>
             </div>
         </div>
     );
 }
 
 function FilterSidebar({ filters, onFilterChange, onResetFilters }) {
-    const handleModeToggle = (mode) => {
-        const currentModes = filters.jobModes;
-        if (currentModes.includes(mode)) {
-            onFilterChange({ jobModes: currentModes.filter((m) => m !== mode) });
+    const handleModeToggle = (modeVal) => {
+        const currentModes = filters.jobModes || [];
+        if (currentModes.includes(modeVal)) {
+            onFilterChange({ jobModes: currentModes.filter((m) => m !== modeVal) });
         } else {
-            onFilterChange({ jobModes: [...currentModes, mode] });
+            onFilterChange({ jobModes: [...currentModes, modeVal] });
         }
     };
-
-    const isIndiaSelected = filters.country === 'India';
 
     return (
         <aside className="sidebar" id="filter-sidebar">
@@ -1717,178 +1304,191 @@ function FilterSidebar({ filters, onFilterChange, onResetFilters }) {
             </div>
 
             <div className="filter__group">
-                <label className="filter__label" htmlFor="country-select">
+                <label className="filter__label" htmlFor="location-filter">
                     <span><MapPin size={15} style={{ display: 'inline', marginRight: '6px', color: 'var(--blue)' }} /> Location</span>
                 </label>
-                <select
-                    id="country-select"
-                    className="select__input"
-                    value={filters.country}
-                    onChange={(e) => {
-                        const country = e.target.value;
-                        onFilterChange({
-                            country,
-                            indianState: country === 'India' ? filters.indianState : 'All States',
-                        });
-                    }}
-                >
-                    {COUNTRIES.map((c) => (
-                        <option key={c} value={c}>
-                            {c}
-                        </option>
-                    ))}
-                </select>
+                <input
+                    id="location-filter"
+                    type="text"
+                    className="text__input"
+                    placeholder="e.g. Bangalore, Remote, Pune..."
+                    value={filters.location || ''}
+                    onChange={(e) => onFilterChange({ location: e.target.value })}
+                />
             </div>
-
-            {isIndiaSelected && (
-                <div className="india__section" id="india-states-filter">
-                    <div className="india__badge">
-                        <Flag size={12} /> Indian State Filter
-                    </div>
-                    <label className="filter__label" htmlFor="state-select" style={{ fontSize: '12.5px', marginBottom: '6px' }}>
-                        Select Indian State:
-                    </label>
-                    <select
-                        id="state-select"
-                        className="select__input"
-                        value={filters.indianState}
-                        onChange={(e) => onFilterChange({ indianState: e.target.value })}
-                        style={{ background: '#FFFFFF', borderColor: 'rgba(124, 92, 255, 0.3)' }}
-                    >
-                        {INDIAN_STATES.map((state) => (
-                            <option key={state} value={state}>
-                                {state}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            )}
 
             <div className="filter__group">
                 <div className="filter__label">
-                    <span><DollarSign size={15} style={{ display: 'inline', marginRight: '4px', color: 'var(--blue)' }} /> Min Salary Threshold</span>
+                    <span><DollarSign size={15} style={{ display: 'inline', marginRight: '4px', color: 'var(--blue)' }} /> Min Salary LPA</span>
                     <span className="filter__label-sub">
-                        {filters.salaryRange === 0 ? 'Any Salary' : `₹${filters.salaryRange}+ LPA`}
+                        {filters.minSalary === 0 || !filters.minSalary ? 'Any Salary' : `₹${filters.minSalary}+ LPA`}
                     </span>
                 </div>
                 <input
                     id="salary-range-slider"
                     type="range"
                     min="0"
-                    max="50"
+                    max="60"
                     step="5"
                     className="range__input"
-                    value={filters.salaryRange}
-                    onChange={(e) => onFilterChange({ salaryRange: Number(e.target.value) })}
+                    value={filters.minSalary || 0}
+                    onChange={(e) => onFilterChange({ minSalary: Number(e.target.value) })}
                 />
                 <div className="range__labels">
                     <span>₹0 LPA</span>
-                    <span>₹25 LPA</span>
-                    <span>₹50+ LPA</span>
+                    <span>₹30 LPA</span>
+                    <span>₹60+ LPA</span>
                 </div>
             </div>
 
             <div className="filter__group">
                 <label className="filter__label">
-                    <span><Building size={15} style={{ display: 'inline', marginRight: '6px', color: 'var(--blue)' }} /> Job Mode</span>
+                    <span><Building size={15} style={{ display: 'inline', marginRight: '6px', color: 'var(--blue)' }} /> Work Mode</span>
                 </label>
                 <div className="checkbox__group">
-                    {(['OnSite', 'Remote', 'Hybrid']).map((mode) => {
-                        const checked = filters.jobModes.includes(mode);
+                    {['REMOTE', 'HYBRID', 'ONSITE'].map((modeVal) => {
+                        const checked = (filters.jobModes || []).includes(modeVal);
                         return (
-                            <label key={mode} className="checkbox__label">
+                            <label key={modeVal} className="checkbox__label">
                                 <input
                                     type="checkbox"
                                     className="checkbox__input"
                                     checked={checked}
-                                    onChange={() => handleModeToggle(mode)}
+                                    onChange={() => handleModeToggle(modeVal)}
                                 />
                                 <div className="checkbox__custom">
                                     {checked && <span style={{ fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
                                 </div>
-                                <span>{mode}</span>
+                                <span>{modeVal.charAt(0) + modeVal.slice(1).toLowerCase()}</span>
                             </label>
                         );
                     })}
                 </div>
             </div>
+
+            <div className="filter__group">
+                <label className="filter__label">
+                    <span><Briefcase size={15} style={{ display: 'inline', marginRight: '6px', color: 'var(--blue)' }} /> Experience Level</span>
+                </label>
+                <select
+                    className="select__input"
+                    value={filters.experienceLevel || ''}
+                    onChange={(e) => onFilterChange({ experienceLevel: e.target.value })}
+                >
+                    <option value="">All Experience Levels</option>
+                    <option value="Entry">Entry Level (0-2 yrs)</option>
+                    <option value="Mid">Mid Level (2-5 yrs)</option>
+                    <option value="Senior">Senior Level (5+ yrs)</option>
+                    <option value="Lead">Lead / Architect</option>
+                </select>
+            </div>
         </aside>
     );
 }
 
-function JobCard({ job, isSaved, isApplied, onSaveToggle, onApplyClick }) {
+function JobCard({ job, isSaved, isApplied, isEmployer, onSaveToggle, onApplyClick }) {
+    const formattedSalary = useMemo(() => {
+        if (job.min_salary && job.max_salary) {
+            return `₹${job.min_salary} - ₹${job.max_salary} LPA`;
+        } else if (job.min_salary) {
+            return `₹${job.min_salary}+ LPA`;
+        } else if (job.max_salary) {
+            return `Up to ₹${job.max_salary} LPA`;
+        }
+        return 'Competitive Pay';
+    }, [job.min_salary, job.max_salary]);
+
+    const formattedDate = useMemo(() => {
+        if (!job.created_at) return 'Recently';
+        const d = new Date(job.created_at);
+        const diffHours = Math.floor((new Date() - d) / (1000 * 60 * 60));
+        if (diffHours < 24) return `${Math.max(1, diffHours)}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays}d ago`;
+    }, [job.created_at]);
+
+    const companyInitial = (job.company_name || job.employer_name || 'C').charAt(0).toUpperCase();
+
     return (
-        <div
-            className={`job__card ${job.featured ? 'job__card--featured' : ''}`}
-            id={`job-card-${job.id}`}
-        >
+        <div className="job__card" id={`job-card-${job.job_id}`}>
             <div className="job__card-top">
                 <div className="job__card-company-info">
-                    <div
-                        className="job__company-logo"
-                        style={{ backgroundColor: job.companyBg || 'var(--blue)' }}
-                    >
-                        {job.companyLogo}
+                    <div className="job__company-logo">
+                        {companyInitial}
                     </div>
 
                     <div className="job__details">
                         <h3 className="job__title">
                             {job.title}
-                            {job.featured && (
-                                <span className="badge" style={{ background: 'var(--violet-soft)', color: 'var(--violet)' }}>
-                                    Featured
+                            {job.job_type && (
+                                <span className="badge">
+                                    {job.job_type}
                                 </span>
                             )}
                         </h3>
-                        <span className="job__company-name">{job.company}</span>
+                        <span className="job__company-name">
+                            {job.company_name || job.employer_name || 'Hiring Company'}
+                        </span>
                     </div>
                 </div>
 
-                <button
-                    className={`job__save-btn ${isSaved ? 'job__save-btn--active' : ''}`}
-                    onClick={() => onSaveToggle(job.id)}
-                    title={isSaved ? 'Remove from Saved Jobs' : 'Save Job'}
-                >
-                    <Bookmark size={18} fill={isSaved ? 'currentColor' : 'none'} />
-                </button>
+                {!isEmployer && (
+                    <button
+                        className={`job__save-btn ${isSaved ? 'job__save-btn--active' : ''}`}
+                        onClick={() => onSaveToggle(job.job_id)}
+                        title={isSaved ? 'Remove from Saved Jobs' : 'Save Job'}
+                    >
+                        <Bookmark size={18} fill={isSaved ? 'currentColor' : 'none'} />
+                    </button>
+                )}
             </div>
 
             <div className="job__meta">
                 <div className="job__salary-badge">
-                    {job.salaryRange}
+                    {formattedSalary}
                 </div>
 
-                <div className="job__meta-item">
-                    <MapPin size={15} style={{ color: 'var(--ink-faint)' }} />
-                    <span>{job.location}</span>
+                {job.location && (
+                    <div className="job__meta-item">
+                        <MapPin size={15} style={{ color: 'var(--ink-faint)' }} />
+                        <span>{job.location}</span>
+                    </div>
+                )}
+
+                <div className={`job__mode-tag job__mode-tag--${job.mode || 'REMOTE'}`}>
+                    {job.mode || 'REMOTE'}
                 </div>
 
-                <div className={`job__mode-tag job__mode-tag--${job.jobMode}`}>
-                    {job.jobMode}
-                </div>
+                {job.experience_level && (
+                    <div className="job__meta-item">
+                        <Briefcase size={15} style={{ color: 'var(--ink-faint)' }} />
+                        <span>{job.experience_level}</span>
+                    </div>
+                )}
 
-                <div className="job__meta-item">
-                    <Briefcase size={15} style={{ color: 'var(--ink-faint)' }} />
-                    <span>{job.experience}</span>
-                </div>
+                {job.application_count > 0 && (
+                    <div className="job__meta-item" style={{ color: 'var(--ink-faint)' }}>
+                        <Users size={14} />
+                        <span>{job.application_count} {job.application_count === 1 ? 'applicant' : 'applicants'}</span>
+                    </div>
+                )}
             </div>
 
             <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--ink-soft)', lineHeight: '1.5' }}>
                 {job.description}
             </p>
 
-            <div className="job__tags">
-                {job.tags.map((tag) => (
-                    <span key={tag} className="job__tag">
-                        {tag}
-                    </span>
-                ))}
-            </div>
-
             <div className="job__card-bottom">
-                <span className="job__posted">Posted {job.postedTime}</span>
+                <span className="job__posted">
+                    <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                    Posted {formattedDate}
+                </span>
 
-                {isApplied ? (
+                {isEmployer ? (
+                    <span className="badge" style={{ background: 'var(--violet-soft)', color: 'var(--violet)' }}>
+                        Employer View
+                    </span>
+                ) : isApplied ? (
                     <button className="job__apply-btn job__apply-btn--applied" disabled>
                         <Check size={16} /> Applied
                     </button>
@@ -1906,19 +1506,41 @@ function JobCard({ job, isSaved, isApplied, onSaveToggle, onApplyClick }) {
 }
 
 function ApplyModal({ job, user, onClose, onSubmitApplication }) {
-    const [fullName, setFullName] = useState(user.name);
-    const [email, setEmail] = useState(user.email);
-    const [coverNote, setCoverNote] = useState('');
-    const [resumeName, setResumeName] = useState('Alex_Morgan_Resume_2026.pdf');
-    const [submitted, setSubmitted] = useState(false);
+    const [resumeUrl, setResumeUrl] = useState(user?.profile?.resume_url || '');
+    const [coverLetter, setCoverLetter] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setSubmitted(true);
-        setTimeout(() => {
-            onSubmitApplication(job.id);
+        setErrorMsg('');
+        setIsSubmitting(true);
+
+        try {
+            const res = await fetch('/api/applications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jobId: job.job_id,
+                    resumeUrl: resumeUrl.trim() || null,
+                    coverLetter: coverLetter.trim() || null,
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                setErrorMsg(data.error || 'Failed to submit application');
+                setIsSubmitting(false);
+                return;
+            }
+
+            onSubmitApplication(job.job_id);
             onClose();
-        }, 1200);
+        } catch (err) {
+            console.error('Apply error:', err);
+            setErrorMsg('Network error. Please try again.');
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -1926,9 +1548,9 @@ function ApplyModal({ job, user, onClose, onSubmitApplication }) {
             <div className="modal__content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal__header">
                     <div>
-                        <h3 className="modal__title">Apply to {job.company}</h3>
+                        <h3 className="modal__title">Apply to {job.company_name || job.employer_name || 'Role'}</h3>
                         <span style={{ fontSize: '13px', color: 'var(--ink-soft)' }}>
-                            {job.title} ({job.location})
+                            {job.title} • {job.location || 'Remote'}
                         </span>
                     </div>
                     <button className="modal__close" onClick={onClose}>
@@ -1936,109 +1558,281 @@ function ApplyModal({ job, user, onClose, onSubmitApplication }) {
                     </button>
                 </div>
 
-                {submitted ? (
-                    <div className="modal__body" style={{ textAlign: 'center', padding: '40px 24px' }}>
-                        <CheckCircle2 size={48} style={{ color: '#2E7D32', margin: '0 auto 12px' }} />
-                        <h3 style={{ margin: '0 0 6px', fontSize: '20px', color: 'var(--ink)' }}>
-                            Application Submitted!
-                        </h3>
-                        <p style={{ margin: 0, color: 'var(--ink-soft)', fontSize: '14px' }}>
-                            Your profile and resume have been forwarded directly to {job.company}'s recruitment team.
-                        </p>
+                <form onSubmit={handleSubmit}>
+                    <div className="modal__body">
+                        {errorMsg && (
+                            <div style={{ padding: '10px 14px', background: 'var(--rose-soft)', color: 'var(--rose)', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <AlertCircle size={16} /> {errorMsg}
+                            </div>
+                        )}
+
+                        <div className="form__group">
+                            <label className="form__label">Applicant Name</label>
+                            <input
+                                type="text"
+                                className="form__input"
+                                value={user?.name || ''}
+                                disabled
+                                style={{ background: 'var(--paper)', cursor: 'not-allowed' }}
+                            />
+                        </div>
+
+                        <div className="form__group">
+                            <label className="form__label">Applicant Email</label>
+                            <input
+                                type="email"
+                                className="form__input"
+                                value={user?.email || ''}
+                                disabled
+                                style={{ background: 'var(--paper)', cursor: 'not-allowed' }}
+                            />
+                        </div>
+
+                        <div className="form__group">
+                            <label className="form__label">Resume Link or Portfolio URL</label>
+                            <input
+                                type="url"
+                                className="form__input"
+                                placeholder="https://drive.google.com/... or https://myportfolio.com"
+                                value={resumeUrl}
+                                onChange={(e) => setResumeUrl(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="form__group">
+                            <label className="form__label">Cover Letter / Note (Optional)</label>
+                            <textarea
+                                className="form__textarea"
+                                rows={4}
+                                placeholder="Share why you're a great fit for this position..."
+                                value={coverLetter}
+                                onChange={(e) => setCoverLetter(e.target.value)}
+                            />
+                        </div>
                     </div>
-                ) : (
-                    <form onSubmit={handleSubmit}>
-                        <div className="modal__body">
+
+                    <div className="modal__footer">
+                        <button
+                            type="button"
+                            className="btn btn--ghost"
+                            onClick={onClose}
+                            disabled={isSubmitting}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn btn--primary"
+                            disabled={isSubmitting}
+                        >
+                            <Send size={15} /> {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+function PostJobModal({ user, onClose, onJobCreated }) {
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [location, setLocation] = useState('');
+    const [minSalary, setMinSalary] = useState('');
+    const [maxSalary, setMaxSalary] = useState('');
+    const [mode, setMode] = useState('REMOTE');
+    const [jobType, setJobType] = useState('Full-time');
+    const [experienceLevel, setExperienceLevel] = useState('Mid');
+    const [isPosting, setIsPosting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setErrorMsg('');
+
+        if (!title.trim() || !description.trim()) {
+            setErrorMsg('Title and description are required.');
+            return;
+        }
+
+        setIsPosting(true);
+        try {
+            const res = await fetch('/api/jobs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title.trim(),
+                    description: description.trim(),
+                    location: location.trim() || null,
+                    min_salary: minSalary ? Number(minSalary) : null,
+                    max_salary: maxSalary ? Number(maxSalary) : null,
+                    mode,
+                    job_type: jobType,
+                    experience_level: experienceLevel,
+                    status: 'PUBLISHED',
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                setErrorMsg(data.error || 'Failed to post job');
+                setIsPosting(false);
+                return;
+            }
+
+            onJobCreated(data.job);
+            onClose();
+        } catch (err) {
+            console.error('Job post error:', err);
+            setErrorMsg('Network error. Failed to post job.');
+            setIsPosting(false);
+        }
+    };
+
+    return (
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="modal__content" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal__header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <PlusCircle size={20} style={{ color: 'var(--violet)' }} />
+                        <h3 className="modal__title">Post a New Job Opening</h3>
+                    </div>
+                    <button className="modal__close" onClick={onClose}>
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit}>
+                    <div className="modal__body">
+                        {errorMsg && (
+                            <div style={{ padding: '10px 14px', background: 'var(--rose-soft)', color: 'var(--rose)', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <AlertCircle size={16} /> {errorMsg}
+                            </div>
+                        )}
+
+                        <div className="form__group">
+                            <label className="form__label">Job Title *</label>
+                            <input
+                                type="text"
+                                className="form__input"
+                                placeholder="e.g. Senior Backend Engineer"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <div className="form__group">
-                                <label className="form__label">Full Name</label>
+                                <label className="form__label">Work Mode *</label>
+                                <select
+                                    className="form__select"
+                                    value={mode}
+                                    onChange={(e) => setMode(e.target.value)}
+                                >
+                                    <option value="REMOTE">Remote</option>
+                                    <option value="HYBRID">Hybrid</option>
+                                    <option value="ONSITE">Onsite</option>
+                                </select>
+                            </div>
+
+                            <div className="form__group">
+                                <label className="form__label">Job Type</label>
+                                <select
+                                    className="form__select"
+                                    value={jobType}
+                                    onChange={(e) => setJobType(e.target.value)}
+                                >
+                                    <option value="Full-time">Full-time</option>
+                                    <option value="Part-time">Part-time</option>
+                                    <option value="Contract">Contract</option>
+                                    <option value="Internship">Internship</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div className="form__group">
+                                <label className="form__label">Location</label>
                                 <input
                                     type="text"
                                     className="form__input"
-                                    value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    required
+                                    placeholder="e.g. Bangalore, India"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
                                 />
                             </div>
 
                             <div className="form__group">
-                                <label className="form__label">Email Address</label>
-                                <input
-                                    type="email"
-                                    className="form__input"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form__group">
-                                <label className="form__label">Attached Resume</label>
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '10px',
-                                        padding: '10px 14px',
-                                        background: 'var(--paper)',
-                                        border: '1px solid var(--line)',
-                                        borderRadius: '8px',
-                                        fontSize: '13.5px',
-                                        color: 'var(--ink)',
-                                    }}
+                                <label className="form__label">Experience Level</label>
+                                <select
+                                    className="form__select"
+                                    value={experienceLevel}
+                                    onChange={(e) => setExperienceLevel(e.target.value)}
                                 >
-                                    <FileText size={18} style={{ color: 'var(--blue)' }} />
-                                    <span style={{ flex: 1, fontWeight: 500 }}>{resumeName}</span>
-                                    <label
-                                        style={{
-                                            fontSize: '12px',
-                                            color: 'var(--blue)',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        Change
-                                        <input
-                                            type="file"
-                                            style={{ display: 'none' }}
-                                            onChange={(e) => {
-                                                if (e.target.files && e.target.files[0]) {
-                                                    setResumeName(e.target.files[0].name);
-                                                }
-                                            }}
-                                        />
-                                    </label>
-                                </div>
+                                    <option value="Entry">Entry Level</option>
+                                    <option value="Mid">Mid Level</option>
+                                    <option value="Senior">Senior Level</option>
+                                    <option value="Lead">Lead / Staff</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div className="form__group">
+                                <label className="form__label">Min Salary (LPA)</label>
+                                <input
+                                    type="number"
+                                    className="form__input"
+                                    placeholder="e.g. 18"
+                                    value={minSalary}
+                                    onChange={(e) => setMinSalary(e.target.value)}
+                                />
                             </div>
 
                             <div className="form__group">
-                                <label className="form__label">Quick Cover Note (Optional)</label>
-                                <textarea
-                                    className="form__textarea"
-                                    rows={3}
-                                    placeholder="Highlight why you are a great fit for this software engineering role..."
-                                    value={coverNote}
-                                    onChange={(e) => setCoverNote(e.target.value)}
+                                <label className="form__label">Max Salary (LPA)</label>
+                                <input
+                                    type="number"
+                                    className="form__input"
+                                    placeholder="e.g. 35"
+                                    value={maxSalary}
+                                    onChange={(e) => setMaxSalary(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        <div className="modal__footer">
-                            <button
-                                type="button"
-                                className="btn btn--ghost"
-                                onClick={onClose}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                className="btn btn--primary"
-                            >
-                                <Send size={15} /> Submit Application
-                            </button>
+                        <div className="form__group">
+                            <label className="form__label">Job Description *</label>
+                            <textarea
+                                className="form__textarea"
+                                rows={5}
+                                placeholder="Describe the role responsibilities, requirements, and tech stack..."
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                required
+                            />
                         </div>
-                    </form>
-                )}
+                    </div>
+
+                    <div className="modal__footer">
+                        <button
+                            type="button"
+                            className="btn btn--ghost"
+                            onClick={onClose}
+                            disabled={isPosting}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn btn--violet"
+                            disabled={isPosting}
+                        >
+                            <PlusCircle size={15} /> {isPosting ? 'Publishing...' : 'Publish Job'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );
@@ -2047,11 +1841,7 @@ function ApplyModal({ job, user, onClose, onSubmitApplication }) {
 function SavedJobsModal({ savedJobs, appliedJobIds, onClose, onRemoveSaved, onApplyClick }) {
     return (
         <div className="modal__overlay" onClick={onClose}>
-            <div
-                className="modal__content"
-                style={{ maxWidth: '640px' }}
-                onClick={(e) => e.stopPropagation()}
-            >
+            <div className="modal__content" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
                 <div className="modal__header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Bookmark size={20} style={{ color: 'var(--violet)' }} />
@@ -2062,7 +1852,7 @@ function SavedJobsModal({ savedJobs, appliedJobIds, onClose, onRemoveSaved, onAp
                     </button>
                 </div>
 
-                <div className="modal__body" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                <div className="modal__body" style={{ maxHeight: '440px', overflowY: 'auto' }}>
                     {savedJobs.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--ink-soft)' }}>
                             <Bookmark size={36} style={{ color: 'var(--ink-faint)', margin: '0 auto 12px' }} />
@@ -2073,10 +1863,10 @@ function SavedJobsModal({ savedJobs, appliedJobIds, onClose, onRemoveSaved, onAp
                         </div>
                     ) : (
                         savedJobs.map((job) => {
-                            const isApplied = appliedJobIds.includes(job.id);
+                            const isApplied = appliedJobIds.includes(job.job_id);
                             return (
                                 <div
-                                    key={job.id}
+                                    key={job.job_id}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -2089,30 +1879,22 @@ function SavedJobsModal({ savedJobs, appliedJobIds, onClose, onRemoveSaved, onAp
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                                        <div
-                                            className="job__company-logo"
-                                            style={{
-                                                backgroundColor: job.companyBg || 'var(--blue)',
-                                                width: '38px',
-                                                height: '38px',
-                                                fontSize: '14px',
-                                            }}
-                                        >
-                                            {job.companyLogo}
+                                        <div className="job__company-logo" style={{ width: '38px', height: '38px', fontSize: '14px' }}>
+                                            {(job.company_name || 'C').charAt(0).toUpperCase()}
                                         </div>
                                         <div>
                                             <h4 style={{ margin: 0, fontSize: '14.5px', color: 'var(--ink)' }}>
                                                 {job.title}
                                             </h4>
                                             <span style={{ fontSize: '12.5px', color: 'var(--ink-soft)' }}>
-                                                {job.company} • {job.location} • <strong style={{ color: '#2E7D32' }}>{job.salaryRange}</strong>
+                                                {job.company_name || 'Hiring Co'} • {job.location || 'Remote'}
                                             </span>
                                         </div>
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         {isApplied ? (
-                                            <span className="badge" style={{ background: '#E8F5E9', color: '#2E7D32' }}>
+                                            <span className="badge" style={{ background: 'var(--emerald-soft)', color: 'var(--emerald)' }}>
                                                 Applied
                                             </span>
                                         ) : (
@@ -2137,7 +1919,7 @@ function SavedJobsModal({ savedJobs, appliedJobIds, onClose, onRemoveSaved, onAp
                                                 padding: '6px',
                                             }}
                                             title="Remove from saved"
-                                            onClick={() => onRemoveSaved(job.id)}
+                                            onClick={() => onRemoveSaved(job.job_id)}
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -2158,26 +1940,271 @@ function SavedJobsModal({ savedJobs, appliedJobIds, onClose, onRemoveSaved, onAp
     );
 }
 
-function SettingsModal({ user, onClose, onSaveUser }) {
-    const [name, setName] = useState(user.name);
-    const [email, setEmail] = useState(user.email);
-    const [title, setTitle] = useState(user.title);
-    const [emailAlerts, setEmailAlerts] = useState(true);
-    const [savedSuccess, setSavedSuccess] = useState(false);
+function ApplicationsModal({ applications, onClose }) {
+    return (
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="modal__content" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal__header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FileText size={20} style={{ color: 'var(--emerald)' }} />
+                        <h3 className="modal__title">My Applications ({applications.length})</h3>
+                    </div>
+                    <button className="modal__close" onClick={onClose}>
+                        <X size={18} />
+                    </button>
+                </div>
 
-    const handleSubmit = (e) => {
+                <div className="modal__body" style={{ maxHeight: '440px', overflowY: 'auto' }}>
+                    {applications.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--ink-soft)' }}>
+                            <FileText size={36} style={{ color: 'var(--ink-faint)', margin: '0 auto 12px' }} />
+                            <p style={{ margin: 0, fontWeight: 600 }}>No applications submitted yet</p>
+                            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--ink-faint)' }}>
+                                When you apply to jobs, your application statuses will appear here in real time.
+                            </p>
+                        </div>
+                    ) : (
+                        applications.map((app) => (
+                            <div
+                                key={app.application_id}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '14px',
+                                    border: '1px solid var(--line)',
+                                    borderRadius: '10px',
+                                    background: 'var(--panel)',
+                                    gap: '12px',
+                                }}
+                            >
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '14.5px', color: 'var(--ink)' }}>
+                                        {app.job_title}
+                                    </h4>
+                                    <span style={{ fontSize: '12.5px', color: 'var(--ink-soft)' }}>
+                                        {app.company_name || 'Employer'} • {app.job_location || 'Remote'}
+                                    </span>
+                                    <div style={{ fontSize: '11px', color: 'var(--ink-faint)', marginTop: '4px' }}>
+                                        Applied on {new Date(app.applied_at).toLocaleDateString()}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <span
+                                        className="badge"
+                                        style={{
+                                            padding: '5px 10px',
+                                            background:
+                                                app.status === 'HIRED'
+                                                    ? '#ECFDF5'
+                                                    : app.status === 'SHORTLISTED'
+                                                    ? '#F1EDFF'
+                                                    : app.status === 'REJECTED'
+                                                    ? '#FEF2F2'
+                                                    : '#EAF0FE',
+                                            color:
+                                                app.status === 'HIRED'
+                                                    ? '#10B981'
+                                                    : app.status === 'SHORTLISTED'
+                                                    ? '#7C5CFF'
+                                                    : app.status === 'REJECTED'
+                                                    ? '#EF4444'
+                                                    : '#3B6FE0',
+                                        }}
+                                    >
+                                        {app.status}
+                                    </span>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                <div className="modal__footer">
+                    <button className="btn btn--ghost" onClick={onClose}>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function EmployerDashboardModal({ user, onClose, onRefreshJobs }) {
+    const [applications, setApplications] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchEmployerApps() {
+            try {
+                const res = await fetch('/api/applications');
+                const data = await res.json();
+                if (data.success) {
+                    setApplications(data.applications || []);
+                }
+            } catch (err) {
+                console.error('Fetch employer applications error:', err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchEmployerApps();
+    }, []);
+
+    const handleStatusChange = async (applicationId, newStatus) => {
+        try {
+            const res = await fetch('/api/applications', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ applicationId, status: newStatus }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setApplications((prev) =>
+                    prev.map((a) => (a.application_id === applicationId ? { ...a, status: newStatus } : a))
+                );
+            }
+        } catch (err) {
+            console.error('Status change error:', err);
+        }
+    };
+
+    return (
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="modal__content" style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal__header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Users size={20} style={{ color: 'var(--blue)' }} />
+                        <h3 className="modal__title">Received Job Applications ({applications.length})</h3>
+                    </div>
+                    <button className="modal__close" onClick={onClose}>
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="modal__body" style={{ maxHeight: '460px', overflowY: 'auto' }}>
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '30px' }}>Loading applicant data...</div>
+                    ) : applications.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--ink-soft)' }}>
+                            <Users size={36} style={{ color: 'var(--ink-faint)', margin: '0 auto 12px' }} />
+                            <p style={{ margin: 0, fontWeight: 600 }}>No applicants received yet</p>
+                            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--ink-faint)' }}>
+                                Candidates who apply to your posted jobs will appear here for review.
+                            </p>
+                        </div>
+                    ) : (
+                        applications.map((app) => (
+                            <div
+                                key={app.application_id}
+                                style={{
+                                    padding: '16px',
+                                    border: '1px solid var(--line)',
+                                    borderRadius: '10px',
+                                    background: 'var(--panel)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '10px',
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--ink)' }}>
+                                            {app.applicant_name} <span style={{ fontSize: '13px', color: 'var(--ink-faint)', fontWeight: 400 }}>({app.applicant_email})</span>
+                                        </h4>
+                                        <span style={{ fontSize: '13px', color: 'var(--blue)', fontWeight: 600 }}>
+                                            Applied for: {app.job_title}
+                                        </span>
+                                    </div>
+
+                                    <select
+                                        value={app.status}
+                                        onChange={(e) => handleStatusChange(app.application_id, e.target.value)}
+                                        className="select__input"
+                                        style={{ width: 'auto', padding: '4px 8px', fontSize: '12px' }}
+                                    >
+                                        <option value="APPLIED">Applied</option>
+                                        <option value="REVIEWING">Reviewing</option>
+                                        <option value="SHORTLISTED">Shortlisted</option>
+                                        <option value="REJECTED">Rejected</option>
+                                        <option value="HIRED">Hired</option>
+                                    </select>
+                                </div>
+
+                                {app.cover_letter && (
+                                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--ink-soft)', background: 'var(--paper)', padding: '8px 12px', borderRadius: '6px' }}>
+                                        "{app.cover_letter}"
+                                    </p>
+                                )}
+
+                                <div style={{ display: 'flex', gap: '12px', fontSize: '12.5px', color: 'var(--ink-faint)', alignItems: 'center' }}>
+                                    {app.resume_url && (
+                                        <a href={app.resume_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <LinkIcon size={13} /> View Resume
+                                        </a>
+                                    )}
+                                    {app.applicant_phone && <span>Phone: {app.applicant_phone}</span>}
+                                    {app.applicant_location && <span>Location: {app.applicant_location}</span>}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                <div className="modal__footer">
+                    <button className="btn btn--ghost" onClick={onClose}>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SettingsModal({ user, onClose, onSaveUser }) {
+    const [name, setName] = useState(user?.name || '');
+    const [emailNotifications, setEmailNotifications] = useState(user?.settings?.email_notifications !== false);
+    const [jobAlerts, setJobAlerts] = useState(user?.settings?.job_alerts !== false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onSaveUser({
-            ...user,
-            name,
-            email,
-            title,
-        });
-        setSavedSuccess(true);
-        setTimeout(() => {
-            setSavedSuccess(false);
+        setIsSaving(true);
+
+        try {
+            await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_settings',
+                    email_notifications: emailNotifications,
+                    job_alerts: jobAlerts,
+                }),
+            });
+
+            if (name !== user?.name) {
+                await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update_profile',
+                        updates: { name },
+                    }),
+                });
+            }
+
+            onSaveUser({
+                ...user,
+                name,
+                settings: { email_notifications: emailNotifications, job_alerts: jobAlerts },
+            });
             onClose();
-        }, 1000);
+        } catch (err) {
+            console.error('Settings save error:', err);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -2186,7 +2213,7 @@ function SettingsModal({ user, onClose, onSaveUser }) {
                 <div className="modal__header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Settings size={20} style={{ color: 'var(--blue)' }} />
-                        <h3 className="modal__title">Account Settings</h3>
+                        <h3 className="modal__title">Account & Notification Settings</h3>
                     </div>
                     <button className="modal__close" onClick={onClose}>
                         <X size={18} />
@@ -2195,28 +2222,8 @@ function SettingsModal({ user, onClose, onSaveUser }) {
 
                 <form onSubmit={handleSubmit}>
                     <div className="modal__body">
-                        {savedSuccess && (
-                            <div
-                                style={{
-                                    padding: '10px 14px',
-                                    background: '#E8F5E9',
-                                    color: '#2E7D32',
-                                    borderRadius: '8px',
-                                    fontSize: '13px',
-                                    fontWeight: 600,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                }}
-                            >
-                                <Check size={16} /> Settings saved successfully!
-                            </div>
-                        )}
-
                         <div className="form__group">
-                            <label className="form__label">
-                                <User size={14} style={{ display: 'inline', marginRight: '4px' }} /> Full Name
-                            </label>
+                            <label className="form__label">Full Name</label>
                             <input
                                 type="text"
                                 className="form__input"
@@ -2227,24 +2234,13 @@ function SettingsModal({ user, onClose, onSaveUser }) {
                         </div>
 
                         <div className="form__group">
-                            <label className="form__label">Email Address</label>
+                            <label className="form__label">Registered Email</label>
                             <input
                                 type="email"
                                 className="form__input"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div className="form__group">
-                            <label className="form__label">Professional Headline / Job Role</label>
-                            <input
-                                type="text"
-                                className="form__input"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="e.g. Senior Software Engineer"
+                                value={user?.email || ''}
+                                disabled
+                                style={{ background: 'var(--paper)', cursor: 'not-allowed' }}
                             />
                         </div>
 
@@ -2253,25 +2249,38 @@ function SettingsModal({ user, onClose, onSaveUser }) {
                                 <input
                                     type="checkbox"
                                     className="checkbox__input"
-                                    checked={emailAlerts}
-                                    onChange={(e) => setEmailAlerts(e.target.checked)}
+                                    checked={emailNotifications}
+                                    onChange={(e) => setEmailNotifications(e.target.checked)}
                                 />
                                 <div className="checkbox__custom">
-                                    {emailAlerts && <span style={{ fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
+                                    {emailNotifications && <span style={{ fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
                                 </div>
-                                <span>
-                                    <Bell size={14} style={{ display: 'inline', marginRight: '4px' }} /> Receive daily job recommendations for {title || 'Software Engineering'}
-                                </span>
+                                <span>Receive Email Notifications for Application Updates</span>
+                            </label>
+                        </div>
+
+                        <div className="form__group">
+                            <label className="checkbox__label">
+                                <input
+                                    type="checkbox"
+                                    className="checkbox__input"
+                                    checked={jobAlerts}
+                                    onChange={(e) => setJobAlerts(e.target.checked)}
+                                />
+                                <div className="checkbox__custom">
+                                    {jobAlerts && <span style={{ fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
+                                </div>
+                                <span>Receive Daily Job Alerts & Recommendations</span>
                             </label>
                         </div>
                     </div>
 
                     <div className="modal__footer">
-                        <button type="button" className="btn btn--ghost" onClick={onClose}>
+                        <button type="button" className="btn btn--ghost" onClick={onClose} disabled={isSaving}>
                             Cancel
                         </button>
-                        <button type="submit" className="btn btn--primary">
-                            Save Preferences
+                        <button type="submit" className="btn btn--primary" disabled={isSaving}>
+                            {isSaving ? 'Saving...' : 'Save Settings'}
                         </button>
                     </div>
                 </form>
@@ -2283,86 +2292,120 @@ function SettingsModal({ user, onClose, onSaveUser }) {
 export default function HomePage() {
     const router = useRouter();
     const [authChecking, setAuthChecking] = useState(true);
-    const [user, setUser] = useState({
-        name: 'User',
-        email: '',
-        title: 'Software Professional',
-        avatar: 'U',
-    });
+    const [user, setUser] = useState(null);
 
-    const [jobs] = useState(INITIAL_JOBS);
-    const [savedJobIds, setSavedJobIds] = useState(['job-1', 'job-2']);
-    const [appliedJobIds, setAppliedJobIds] = useState(['job-3']);
+    // Live Database State
+    const [jobs, setJobs] = useState([]);
+    const [loadingJobs, setLoadingJobs] = useState(true);
+    const [savedJobIds, setSavedJobIds] = useState([]);
+    const [savedJobsList, setSavedJobsList] = useState([]);
+    const [appliedJobIds, setAppliedJobIds] = useState([]);
+    const [applicationsList, setApplicationsList] = useState([]);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({
-        searchQuery: '',
-        salaryRange: 0,
-        country: 'All Countries',
-        indianState: 'All States',
+        location: '',
+        minSalary: 0,
         jobModes: [],
+        experienceLevel: '',
     });
 
     const [activeModal, setActiveModal] = useState(null);
     const [selectedJobForApply, setSelectedJobForApply] = useState(null);
     const [toastMessage, setToastMessage] = useState(null);
 
-    // Verify session on page load
+    const showToast = (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 3000);
+    };
+
+    // 1. Check user auth
     useEffect(() => {
         let isMounted = true;
         async function verifyUser() {
             try {
-                const localToken = typeof window !== 'undefined' ? localStorage.getItem('job_portal_token') : null;
-                const cachedUser = typeof window !== 'undefined' ? localStorage.getItem('job_portal_user') : null;
-
-                if (cachedUser) {
-                    try {
-                        setUser(JSON.parse(cachedUser));
-                    } catch {}
-                }
-
-                const res = await fetch('/api/auth', {
-                    headers: localToken ? { Authorization: `Bearer ${localToken}` } : {},
-                });
+                const res = await fetch('/api/auth');
                 const data = await res.json();
 
                 if (isMounted) {
                     if (!data.authenticated || !data.user) {
-                        // User not logged in, redirect to auth page
-                        if (typeof window !== 'undefined') {
-                            localStorage.removeItem('job_portal_token');
-                            localStorage.removeItem('job_portal_user');
-                        }
                         router.replace('/auth');
                         return;
                     }
-
                     setUser(data.user);
-                    if (typeof window !== 'undefined') {
-                        localStorage.setItem('job_portal_user', JSON.stringify(data.user));
-                    }
                     setAuthChecking(false);
                 }
             } catch (err) {
                 console.error('Home auth check error:', err);
-                if (isMounted) {
-                    router.replace('/auth');
+                if (isMounted) router.replace('/auth');
+            }
+        }
+        verifyUser();
+        return () => { isMounted = false; };
+    }, [router]);
+
+    // 2. Fetch live jobs
+    const fetchJobs = useCallback(async () => {
+        setLoadingJobs(true);
+        try {
+            const params = new URLSearchParams();
+            if (searchQuery.trim()) params.append('search', searchQuery.trim());
+            if (filters.location.trim()) params.append('location', filters.location.trim());
+            if (filters.minSalary > 0) params.append('minSalary', String(filters.minSalary));
+            if (filters.experienceLevel) params.append('experienceLevel', filters.experienceLevel);
+            if (filters.jobModes.length === 1) params.append('mode', filters.jobModes[0]);
+
+            const res = await fetch(`/api/jobs?${params.toString()}`);
+            const data = await res.json();
+            if (data.success) {
+                let fetched = data.jobs || [];
+                if (filters.jobModes.length > 1) {
+                    fetched = fetched.filter((j) => filters.jobModes.includes(j.mode));
                 }
+                setJobs(fetched);
+            }
+        } catch (err) {
+            console.error('Error loading jobs:', err);
+        } finally {
+            setLoadingJobs(false);
+        }
+    }, [searchQuery, filters]);
+
+    useEffect(() => {
+        if (!authChecking) {
+            fetchJobs();
+        }
+    }, [authChecking, fetchJobs]);
+
+    // 3. Fetch user's saved jobs and applications
+    useEffect(() => {
+        if (!user || user.role === 'EMPLOYER') return;
+
+        async function fetchUserData() {
+            try {
+                const [savedRes, appsRes] = await Promise.all([
+                    fetch('/api/saved-jobs'),
+                    fetch('/api/applications')
+                ]);
+
+                const savedData = await savedRes.json();
+                if (savedData.success) {
+                    setSavedJobsList(savedData.savedJobs || []);
+                    setSavedJobIds((savedData.savedJobs || []).map((j) => j.job_id));
+                }
+
+                const appsData = await appsRes.json();
+                if (appsData.success) {
+                    setApplicationsList(appsData.applications || []);
+                    setAppliedJobIds((appsData.applications || []).map((a) => a.job_id));
+                }
+            } catch (err) {
+                console.error('Error loading user applications/saved:', err);
             }
         }
 
-        verifyUser();
-        return () => {
-            isMounted = false;
-        };
-    }, [router]);
-
-    const showToast = (msg) => {
-        setToastMessage(msg);
-        setTimeout(() => {
-            setToastMessage(null);
-        }, 3000);
-    };
+        fetchUserData();
+    }, [user]);
 
     const handleLogout = async () => {
         try {
@@ -2379,65 +2422,29 @@ export default function HomePage() {
         }
 
         showToast('Logged out successfully');
-        setTimeout(() => {
-            router.replace('/auth');
-        }, 400);
+        setTimeout(() => router.replace('/auth'), 400);
     };
 
-    const handleSaveSettings = async (updated) => {
+    const handleSaveToggle = async (jobId) => {
         try {
-            const localToken = typeof window !== 'undefined' ? localStorage.getItem('job_portal_token') : null;
-            const res = await fetch('/api/auth', {
+            const res = await fetch('/api/saved-jobs', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(localToken ? { Authorization: `Bearer ${localToken}` } : {}),
-                },
-                body: JSON.stringify({
-                    action: 'update_profile',
-                    updates: updated,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobId, action: 'toggle' }),
             });
             const data = await res.json();
-            if (data.success && data.user) {
-                setUser(data.user);
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('job_portal_user', JSON.stringify(data.user));
+            if (data.success) {
+                setSavedJobIds(data.savedJobIds || []);
+                showToast(data.message || (data.isSaved ? 'Job saved!' : 'Job removed'));
+
+                const refreshed = await fetch('/api/saved-jobs');
+                const refreshedData = await refreshed.json();
+                if (refreshedData.success) {
+                    setSavedJobsList(refreshedData.savedJobs || []);
                 }
-                showToast('Account preferences saved');
-            } else {
-                setUser(updated);
-                showToast('Account preferences saved locally');
             }
-        } catch {
-            setUser(updated);
-            showToast('Account preferences saved');
-        }
-    };
-
-    const handleFilterChange = (updated) => {
-        setFilters((prev) => ({ ...prev, ...updated }));
-    };
-
-    const handleResetFilters = () => {
-        setSearchQuery('');
-        setFilters({
-            searchQuery: '',
-            salaryRange: 0,
-            country: 'All Countries',
-            indianState: 'All States',
-            jobModes: [],
-        });
-        showToast('Filters reset to default');
-    };
-
-    const handleSaveToggle = (jobId) => {
-        if (savedJobIds.includes(jobId)) {
-            setSavedJobIds(savedJobIds.filter((id) => id !== jobId));
-            showToast('Removed job from Saved Jobs');
-        } else {
-            setSavedJobIds([...savedJobIds, jobId]);
-            showToast('Job saved successfully!');
+        } catch (err) {
+            console.error('Save toggle error:', err);
         }
     };
 
@@ -2446,56 +2453,36 @@ export default function HomePage() {
         setActiveModal('apply');
     };
 
-    const handleSubmitApplication = (jobId) => {
-        if (!appliedJobIds.includes(jobId)) {
-            setAppliedJobIds([...appliedJobIds, jobId]);
-            showToast('Application submitted successfully!');
-        }
+    const handleApplicationSubmitted = async (jobId) => {
+        setAppliedJobIds((prev) => [...prev, jobId]);
+        showToast('Application submitted successfully!');
+
+        try {
+            const appsRes = await fetch('/api/applications');
+            const appsData = await appsRes.json();
+            if (appsData.success) {
+                setApplicationsList(appsData.applications || []);
+            }
+        } catch {}
     };
 
-    const filteredJobs = useMemo(() => {
-        return jobs.filter((job) => {
-            if (searchQuery.trim()) {
-                const q = searchQuery.toLowerCase().trim();
-                const matchesQuery =
-                    job.title.toLowerCase().includes(q) ||
-                    job.role.toLowerCase().includes(q) ||
-                    job.company.toLowerCase().includes(q) ||
-                    job.tags.some((tag) => tag.toLowerCase().includes(q)) ||
-                    job.description.toLowerCase().includes(q);
-                if (!matchesQuery) return false;
-            }
-
-            if (filters.country !== 'All Countries') {
-                if (job.country !== filters.country) return false;
-            }
-
-            if (filters.country === 'India' && filters.indianState !== 'All States') {
-                if (job.state !== filters.indianState) return false;
-            }
-
-            if (filters.salaryRange > 0) {
-                if (job.salaryMin < filters.salaryRange) return false;
-            }
-
-            if (filters.jobModes.length > 0) {
-                if (!filters.jobModes.includes(job.jobMode)) return false;
-            }
-
-            return true;
+    const handleResetFilters = () => {
+        setSearchQuery('');
+        setFilters({
+            location: '',
+            minSalary: 0,
+            jobModes: [],
+            experienceLevel: '',
         });
-    }, [jobs, searchQuery, filters]);
-
-    const savedJobsList = useMemo(() => {
-        return jobs.filter((job) => savedJobIds.includes(job.id));
-    }, [jobs, savedJobIds]);
+        showToast('Filters reset');
+    };
 
     if (authChecking) {
         return (
             <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FBFBFD', fontFamily: 'Inter, sans-serif' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', color: '#5B5867' }}>
                     <div style={{ width: '32px', height: '32px', border: '3px solid #E4E1EC', borderTopColor: '#3B6FE0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ fontSize: '14px', fontWeight: 500 }}>Loading JobPortal...</span>
+                    <span style={{ fontSize: '14px', fontWeight: 500 }}>Connecting to JobPortal...</span>
                 </div>
             </div>
         );
@@ -2508,109 +2495,99 @@ export default function HomePage() {
             <Navbar
                 user={user}
                 savedJobsCount={savedJobIds.length}
+                applicationsCount={applicationsList.length}
                 onOpenSavedJobs={() => setActiveModal('saved')}
+                onOpenApplications={() => setActiveModal('applications')}
                 onOpenSettings={() => setActiveModal('settings')}
-                onOpenProfile={() => router.push('/profile')}
+                onOpenPostJob={() => setActiveModal('post_job')}
+                onOpenEmployerJobs={() => setActiveModal('employer_dashboard')}
                 onLogout={handleLogout}
             />
 
             <SearchBar
                 searchQuery={searchQuery}
-                onSearchChange={(q) => setSearchQuery(q)}
-                onSelectRole={(role) => {
-                    setSearchQuery(role);
-                    showToast(`Filtered by role: ${role}`);
-                }}
+                onSearchChange={setSearchQuery}
+                onSearchSubmit={fetchJobs}
             />
 
             <main className="main__container">
                 <FilterSidebar
                     filters={filters}
-                    onFilterChange={handleFilterChange}
+                    onFilterChange={(up) => setFilters((p) => ({ ...p, ...up }))}
                     onResetFilters={handleResetFilters}
                 />
 
                 <section className="content__area">
                     <div className="results__bar">
                         <div className="results__count">
-                            Showing <span>{filteredJobs.length}</span> {filteredJobs.length === 1 ? 'Job' : 'Jobs'} Available
+                            Showing <span>{jobs.length}</span> {jobs.length === 1 ? 'Job' : 'Jobs'} Available
                         </div>
 
                         <div className="active__filters">
                             {searchQuery && (
                                 <span className="active__filter-tag">
-                                    Role: "{searchQuery}"
-                                    <button
-                                        className="active__filter-remove"
-                                        onClick={() => setSearchQuery('')}
-                                    >
+                                    Keyword: "{searchQuery}"
+                                    <button className="active__filter-remove" onClick={() => setSearchQuery('')}>
                                         <X size={12} />
                                     </button>
                                 </span>
                             )}
 
-                            {filters.country !== 'All Countries' && (
+                            {filters.location && (
                                 <span className="active__filter-tag">
-                                    Country: {filters.country}
-                                    <button
-                                        className="active__filter-remove"
-                                        onClick={() => handleFilterChange({ country: 'All Countries', indianState: 'All States' })}
-                                    >
+                                    Location: {filters.location}
+                                    <button className="active__filter-remove" onClick={() => setFilters((p) => ({ ...p, location: '' }))}>
                                         <X size={12} />
                                     </button>
                                 </span>
                             )}
 
-                            {filters.country === 'India' && filters.indianState !== 'All States' && (
-                                <span className="active__filter-tag" style={{ background: 'var(--violet-soft)', color: 'var(--violet)' }}>
-                                    State: {filters.indianState}
-                                    <button
-                                        className="active__filter-remove"
-                                        onClick={() => handleFilterChange({ indianState: 'All States' })}
-                                    >
-                                        <X size={12} />
-                                    </button>
-                                </span>
-                            )}
-
-                            {filters.salaryRange > 0 && (
+                            {filters.minSalary > 0 && (
                                 <span className="active__filter-tag">
-                                    Min ₹{filters.salaryRange} LPA
-                                    <button
-                                        className="active__filter-remove"
-                                        onClick={() => handleFilterChange({ salaryRange: 0 })}
-                                    >
+                                    Min ₹{filters.minSalary} LPA
+                                    <button className="active__filter-remove" onClick={() => setFilters((p) => ({ ...p, minSalary: 0 }))}>
                                         <X size={12} />
                                     </button>
                                 </span>
                             )}
 
-                            {filters.jobModes.map((mode) => (
-                                <span key={mode} className="active__filter-tag">
-                                    {mode}
+                            {(filters.jobModes || []).map((modeVal) => (
+                                <span key={modeVal} className="active__filter-tag">
+                                    {modeVal}
                                     <button
                                         className="active__filter-remove"
-                                        onClick={() =>
-                                            handleFilterChange({
-                                                jobModes: filters.jobModes.filter((m) => m !== mode),
-                                            })
-                                        }
+                                        onClick={() => setFilters((p) => ({ ...p, jobModes: p.jobModes.filter((m) => m !== modeVal) }))}
                                     >
                                         <X size={12} />
                                     </button>
                                 </span>
                             ))}
+
+                            {filters.experienceLevel && (
+                                <span className="active__filter-tag">
+                                    Level: {filters.experienceLevel}
+                                    <button className="active__filter-remove" onClick={() => setFilters((p) => ({ ...p, experienceLevel: '' }))}>
+                                        <X size={12} />
+                                    </button>
+                                </span>
+                            )}
                         </div>
                     </div>
 
-                    {filteredJobs.length > 0 ? (
+                    {loadingJobs ? (
+                        <div className="empty__state">
+                            <div style={{ width: '28px', height: '28px', border: '3px solid #E4E1EC', borderTopColor: '#3B6FE0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                            <p style={{ margin: '8px 0 0', color: 'var(--ink-soft)' }}>Loading real jobs from database...</p>
+                        </div>
+                    ) : jobs.length > 0 ? (
                         <div className="job__list" id="job-cards-list">
-                            {filteredJobs.map((job) => (
+                            {jobs.map((job) => (
                                 <JobCard
-                                    key={job.id}
+                                    key={job.job_id}
                                     job={job}
-                                    isSaved={savedJobIds.includes(job.id)}
-                                    isApplied={appliedJobIds.includes(job.id)}
+                                    isSaved={savedJobIds.includes(job.job_id)}
+                                    isApplied={appliedJobIds.includes(job.job_id)}
+                                    isEmployer={user?.role === 'EMPLOYER'}
                                     onSaveToggle={handleSaveToggle}
                                     onApplyClick={handleApplyClick}
                                 />
@@ -2621,18 +2598,27 @@ export default function HomePage() {
                             <div className="empty__icon">
                                 <SearchX size={28} />
                             </div>
-                            <h3 className="empty__title">No jobs match your search</h3>
+                            <h3 className="empty__title">No Jobs Found in Database</h3>
                             <p className="empty__subtitle">
-                                Try clearing your filters or searching for another job role like "Software Engineer" or "Frontend Developer".
+                                {user?.role === 'EMPLOYER'
+                                    ? "You haven't posted any jobs yet, or no jobs match the current filters. Click 'Post a Job' above to publish the first role!"
+                                    : "No active jobs match your search filters. Try clearing your filters or check back shortly."}
                             </p>
-                            <button className="btn btn--primary" onClick={handleResetFilters}>
-                                Reset All Filters
-                            </button>
+                            {user?.role === 'EMPLOYER' ? (
+                                <button className="btn btn--violet" onClick={() => setActiveModal('post_job')}>
+                                    <PlusCircle size={15} /> Post a Job
+                                </button>
+                            ) : (
+                                <button className="btn btn--primary" onClick={handleResetFilters}>
+                                    Reset All Filters
+                                </button>
+                            )}
                         </div>
                     )}
                 </section>
             </main>
 
+            {/* Modals */}
             {activeModal === 'apply' && selectedJobForApply && (
                 <ApplyModal
                     job={selectedJobForApply}
@@ -2641,7 +2627,18 @@ export default function HomePage() {
                         setActiveModal(null);
                         setSelectedJobForApply(null);
                     }}
-                    onSubmitApplication={handleSubmitApplication}
+                    onSubmitApplication={handleApplicationSubmitted}
+                />
+            )}
+
+            {activeModal === 'post_job' && (
+                <PostJobModal
+                    user={user}
+                    onClose={() => setActiveModal(null)}
+                    onJobCreated={(newJob) => {
+                        showToast('Job opening published to database!');
+                        fetchJobs();
+                    }}
                 />
             )}
 
@@ -2655,11 +2652,29 @@ export default function HomePage() {
                 />
             )}
 
+            {activeModal === 'applications' && (
+                <ApplicationsModal
+                    applications={applicationsList}
+                    onClose={() => setActiveModal(null)}
+                />
+            )}
+
+            {activeModal === 'employer_dashboard' && (
+                <EmployerDashboardModal
+                    user={user}
+                    onClose={() => setActiveModal(null)}
+                    onRefreshJobs={fetchJobs}
+                />
+            )}
+
             {activeModal === 'settings' && (
                 <SettingsModal
                     user={user}
                     onClose={() => setActiveModal(null)}
-                    onSaveUser={handleSaveSettings}
+                    onSaveUser={(updatedUser) => {
+                        setUser(updatedUser);
+                        showToast('Settings saved successfully');
+                    }}
                 />
             )}
 

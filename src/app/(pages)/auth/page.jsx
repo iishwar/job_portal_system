@@ -15,10 +15,12 @@ const AuthPage = () => {
 
   // shared
   const [email, setEmail] = useState("");
+  const [savedUserEmail, setSavedUserEmail] = useState("");
   const [password, setPassword] = useState("");
 
   // signup only
   const [name, setName] = useState("");
+  const [role, setRole] = useState("JOB_SEEKER"); // "JOB_SEEKER" | "EMPLOYER" | "ADMIN"
   const [confirmPassword, setConfirmPassword] = useState("");
   const [touchedConfirm, setTouchedConfirm] = useState(false);
 
@@ -75,6 +77,22 @@ const AuthPage = () => {
     passwordValid &&
     passwordsMatch;
 
+  const handleRoleChange = (selectedRole) => {
+    if (selectedRole === role) return;
+
+    if (selectedRole === "ADMIN") {
+      if (email !== "admin@admin.com") {
+        setSavedUserEmail(email);
+      }
+      setEmail("admin@admin.com");
+    } else {
+      if (role === "ADMIN") {
+        setEmail(savedUserEmail || "");
+      }
+    }
+    setRole(selectedRole);
+  };
+
   const switchMode = (next) => {
     if (next === mode) return;
     setMode(next);
@@ -83,6 +101,9 @@ const AuthPage = () => {
     setTouchedConfirm(false);
     setErrorMessage("");
     setSuccessMessage("");
+    if (next === "signup" && role === "ADMIN") {
+      setEmail("admin@admin.com");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -96,7 +117,7 @@ const AuthPage = () => {
         action: mode,
         email: email.trim(),
         password,
-        ...(mode === "signup" ? { name: name.trim() } : {}),
+        ...(mode === "signup" ? { name: name.trim(), role } : {}),
       };
 
       const res = await fetch("/api/auth", {
@@ -290,12 +311,77 @@ const AuthPage = () => {
                 </div>
 
                 <form className="form" onSubmit={handleSubmit}>
+                  <div className="field">
+                    <span className="field__label">I am signing up as</span>
+                    <div className="role-options" role="radiogroup" aria-label="Select role">
+                      <label
+                        className={
+                          "role-option" +
+                          (role === "JOB_SEEKER" ? " role-option--active" : "")
+                        }
+                      >
+                        <input
+                          type="radio"
+                          name="signupRole"
+                          value="JOB_SEEKER"
+                          checked={role === "JOB_SEEKER"}
+                          onChange={() => handleRoleChange("JOB_SEEKER")}
+                          className="role-option__input"
+                        />
+                        <span className="role-option__radio">
+                          <span className="role-option__radio-dot" />
+                        </span>
+                        <span className="role-option__label">Job Seeker</span>
+                      </label>
+
+                      <label
+                        className={
+                          "role-option" +
+                          (role === "EMPLOYER" ? " role-option--active" : "")
+                        }
+                      >
+                        <input
+                          type="radio"
+                          name="signupRole"
+                          value="EMPLOYER"
+                          checked={role === "EMPLOYER"}
+                          onChange={() => handleRoleChange("EMPLOYER")}
+                          className="role-option__input"
+                        />
+                        <span className="role-option__radio">
+                          <span className="role-option__radio-dot" />
+                        </span>
+                        <span className="role-option__label">Employer</span>
+                      </label>
+
+                      <label
+                        className={
+                          "role-option" +
+                          (role === "ADMIN" ? " role-option--active" : "")
+                        }
+                      >
+                        <input
+                          type="radio"
+                          name="signupRole"
+                          value="ADMIN"
+                          checked={role === "ADMIN"}
+                          onChange={() => handleRoleChange("ADMIN")}
+                          className="role-option__input"
+                        />
+                        <span className="role-option__radio">
+                          <span className="role-option__radio-dot" />
+                        </span>
+                        <span className="role-option__label">Admin</span>
+                      </label>
+                    </div>
+                  </div>
+
                   <label className="field">
                     <span className="field__label">Name</span>
                     <input
                       type="text"
                       className="field__input"
-                      placeholder="Jordan Casey"
+                      placeholder={role === "ADMIN" ? "Administrator" : "Jordan Casey"}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       autoComplete="name"
@@ -304,16 +390,32 @@ const AuthPage = () => {
                   </label>
 
                   <label className="field">
-                    <span className="field__label">Email</span>
+                    <div className="field__label-row">
+                      <span className="field__label">Email</span>
+                      {role === "ADMIN" && (
+                        <span className="role-badge">Fixed Admin Email</span>
+                      )}
+                    </div>
                     <input
                       type="email"
-                      className="field__input"
-                      placeholder="you@company.com"
+                      className={"field__input" + (role === "ADMIN" ? " field__input--locked" : "")}
+                      placeholder={role === "ADMIN" ? "admin@admin.com" : "you@company.com"}
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        if (role !== "ADMIN") {
+                          setEmail(e.target.value);
+                          setSavedUserEmail(e.target.value);
+                        }
+                      }}
+                      readOnly={role === "ADMIN"}
                       autoComplete="email"
                       required
                     />
+                    {role === "ADMIN" && (
+                      <span className="field__hint field__hint--info">
+                        Admin email is permanently fixed to <strong>admin@admin.com</strong>
+                      </span>
+                    )}
                   </label>
 
                   <label className="field">
@@ -638,10 +740,102 @@ const styles = `
     gap: 7px;
   }
 
+  .field__label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
   .field__label {
     font-size: 13px;
     font-weight: 600;
     color: var(--ink);
+  }
+
+  .role-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--blue);
+    background: var(--blue-soft);
+    padding: 2px 7px;
+    border-radius: 6px;
+    letter-spacing: 0.01em;
+  }
+
+  /* Role radio options */
+  .role-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .role-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .role-option:hover {
+    border-color: var(--blue);
+    background: #F4F7FE;
+  }
+
+  .role-option--active {
+    border-color: var(--blue);
+    background: var(--blue-soft);
+    box-shadow: 0 0 0 1px var(--blue);
+  }
+
+  .role-option__input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .role-option__radio {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--line-strong);
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+  }
+
+  .role-option--active .role-option__radio {
+    border-color: var(--blue);
+  }
+
+  .role-option__radio-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--blue);
+    opacity: 0;
+    transform: scale(0.4);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  .role-option--active .role-option__radio-dot {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .role-option__label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
   }
 
   .field__input {
@@ -654,6 +848,14 @@ const styles = `
     color: var(--ink);
     outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .field__input--locked {
+    background: #F6F5F9;
+    color: var(--ink-soft);
+    cursor: not-allowed;
+    border-color: var(--line);
+    font-weight: 500;
   }
 
   .field__input::placeholder {
@@ -674,10 +876,15 @@ const styles = `
 
   .field__hint {
     font-size: 12.5px;
+    line-height: 1.4;
   }
 
   .field__hint--error {
     color: var(--error);
+  }
+
+  .field__hint--info {
+    color: var(--ink-soft);
   }
 
   .form__forgot {
