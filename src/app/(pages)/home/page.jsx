@@ -1636,6 +1636,11 @@ function ApplyModal({ job, user, onClose, onSubmitApplication }) {
 
 function PostJobModal({ user, onClose, onJobCreated }) {
     const [title, setTitle] = useState('');
+    const [roleId, setRoleId] = useState(null);
+    const [roles, setRoles] = useState([]);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
     const [description, setDescription] = useState('');
     const [location, setLocation] = useState('');
     const [minSalary, setMinSalary] = useState('');
@@ -1645,6 +1650,47 @@ function PostJobModal({ user, onClose, onJobCreated }) {
     const [experienceLevel, setExperienceLevel] = useState('Mid');
     const [isPosting, setIsPosting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+
+    useEffect(() => {
+        let isMounted = true;
+        async function fetchRoles() {
+            try {
+                const res = await fetch('/api/roles');
+                const data = await res.json();
+                if (isMounted && data.success && data.roles) {
+                    setRoles(data.roles);
+                }
+            } catch (err) {
+                console.error('Failed to fetch roles:', err);
+            }
+        }
+        fetchRoles();
+        return () => { isMounted = false; };
+    }, []);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setIsDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filteredRoles = useMemo(() => {
+        if (!title || !title.trim()) return roles.slice(0, 15);
+        const q = title.toLowerCase().trim();
+        return roles
+            .filter(r => r.role_name.toLowerCase().includes(q))
+            .slice(0, 20);
+    }, [roles, title]);
+
+    const handleSelectRole = (r) => {
+        setTitle(r.role_name);
+        setRoleId(r.role_id);
+        setIsDropdownOpen(false);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -1661,6 +1707,7 @@ function PostJobModal({ user, onClose, onJobCreated }) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    role_id: roleId,
                     title: title.trim(),
                     description: description.trim(),
                     location: location.trim() || null,
@@ -1710,16 +1757,99 @@ function PostJobModal({ user, onClose, onJobCreated }) {
                             </div>
                         )}
 
-                        <div className="form__group">
-                            <label className="form__label">Job Title *</label>
-                            <input
-                                type="text"
-                                className="form__input"
-                                placeholder="e.g. Senior Backend Engineer"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                required
-                            />
+                        <div className="form__group" ref={dropdownRef} style={{ position: 'relative' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <label className="form__label">Job Role / Title *</label>
+                                {roleId && (
+                                    <span style={{ fontSize: '11px', color: 'var(--emerald)', background: 'var(--emerald-soft)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                        <Check size={12} /> Standard Role #{roleId} Selected
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="text"
+                                    className="form__input"
+                                    placeholder="Type to search roles (e.g. Frontend Engineer, DevOps, Data Analyst...)"
+                                    value={title}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setTitle(val);
+                                        setIsDropdownOpen(true);
+                                        const exact = roles.find(r => r.role_name.toLowerCase() === val.toLowerCase().trim());
+                                        setRoleId(exact ? exact.role_id : null);
+                                    }}
+                                    onFocus={() => setIsDropdownOpen(true)}
+                                    required
+                                    autoComplete="off"
+                                />
+                                {roleId && (
+                                    <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--emerald)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+                                        <CheckCircle size={16} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {isDropdownOpen && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    right: 0,
+                                    background: '#FFFFFF',
+                                    border: '1px solid var(--border-strong)',
+                                    borderRadius: '8px',
+                                    marginTop: '4px',
+                                    maxHeight: '220px',
+                                    overflowY: 'auto',
+                                    boxShadow: '0 8px 24px rgba(20, 18, 28, 0.12)',
+                                    zIndex: 100,
+                                }}>
+                                    <div style={{ padding: '6px 12px', fontSize: '11px', color: 'var(--ink-faint)', borderBottom: '1px solid var(--border)', background: 'var(--paper)', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>{title.trim() ? `Matching Roles (${filteredRoles.length})` : 'Available Roles'}</span>
+                                        <span>Click to select</span>
+                                    </div>
+                                    {filteredRoles.length > 0 ? (
+                                        filteredRoles.map((r) => {
+                                            const isSelected = roleId === r.role_id || title.trim().toLowerCase() === r.role_name.toLowerCase();
+                                            return (
+                                                <div
+                                                    key={r.role_id}
+                                                    onClick={() => handleSelectRole(r)}
+                                                    style={{
+                                                        padding: '9px 12px',
+                                                        fontSize: '13px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        background: isSelected ? 'var(--blue-soft)' : 'transparent',
+                                                        color: isSelected ? 'var(--blue)' : 'var(--ink)',
+                                                        fontWeight: isSelected ? 600 : 400,
+                                                        borderBottom: '1px solid var(--paper)',
+                                                        transition: 'background 0.15s ease'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (!isSelected) e.currentTarget.style.background = 'var(--paper)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                                    }}
+                                                >
+                                                    <span>{r.role_name}</span>
+                                                    <span style={{ fontSize: '11px', color: isSelected ? 'var(--blue)' : 'var(--ink-faint)', fontFamily: 'monospace' }}>
+                                                        #{r.role_id}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div style={{ padding: '12px', fontSize: '12px', color: 'var(--ink-faint)', textAlign: 'center' }}>
+                                            No exact predefined role found. Your custom title will be saved.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

@@ -285,6 +285,8 @@ export async function getJobs({
         SELECT 
             j.job_id,
             j.employer_id,
+            j.role_id,
+            r.role_name,
             j.title,
             j.description,
             j.location,
@@ -306,6 +308,7 @@ export async function getJobs({
             (SELECT COUNT(*) FROM applications a WHERE a.job_id = j.job_id)::int as application_count
         FROM jobs j
         JOIN users u ON j.employer_id = u.user_id
+        LEFT JOIN roles r ON j.role_id = r.role_id
         LEFT JOIN employer_profiles ep ON j.employer_id = ep.user_id
         ${whereClause}
         ORDER BY j.created_at DESC
@@ -323,6 +326,8 @@ export async function getJobById(jobId) {
         SELECT 
             j.job_id,
             j.employer_id,
+            j.role_id,
+            r.role_name,
             j.title,
             j.description,
             j.location,
@@ -344,6 +349,7 @@ export async function getJobById(jobId) {
             (SELECT COUNT(*) FROM applications a WHERE a.job_id = j.job_id)::int as application_count
         FROM jobs j
         JOIN users u ON j.employer_id = u.user_id
+        LEFT JOIN roles r ON j.role_id = r.role_id
         LEFT JOIN employer_profiles ep ON j.employer_id = ep.user_id
         WHERE j.job_id = $1
         LIMIT 1
@@ -352,8 +358,21 @@ export async function getJobById(jobId) {
     return res.rows[0] || null;
 }
 
+export async function getRoles(search = '') {
+    if (search && search.trim()) {
+        const res = await query(
+            'SELECT role_id, role_name FROM roles WHERE role_name ILIKE $1 ORDER BY role_name ASC LIMIT 50',
+            [`%${search.trim()}%`]
+        );
+        return res.rows;
+    }
+    const res = await query('SELECT role_id, role_name FROM roles ORDER BY role_name ASC');
+    return res.rows;
+}
+
 export async function createJob({
     employer_id,
+    role_id = null,
     title,
     description,
     location = null,
@@ -370,14 +389,15 @@ export async function createJob({
 
     const res = await query(
         `INSERT INTO jobs (
-            employer_id, title, description, location, 
+            employer_id, role_id, title, description, location, 
             min_salary, max_salary, mode, job_type, 
             experience_level, status, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
         RETURNING *`,
         [
             employer_id,
+            role_id ? Number(role_id) : null,
             title.trim(),
             description.trim(),
             location ? location.trim() : null,
@@ -394,6 +414,7 @@ export async function createJob({
 
 export async function updateJob(jobId, employerId, data) {
     const {
+        role_id,
         title,
         description,
         location,
@@ -420,8 +441,9 @@ export async function updateJob(jobId, employerId, data) {
              job_type = COALESCE($7, job_type),
              experience_level = COALESCE($8, experience_level),
              status = COALESCE($9, status),
+             role_id = COALESCE($10, role_id),
              updated_at = NOW()
-         WHERE job_id = $10 AND (employer_id = $11 OR $12 = 'ADMIN')
+         WHERE job_id = $11 AND (employer_id = $12 OR $13 = 'ADMIN')
          RETURNING *`,
         [
             title || null,
@@ -433,6 +455,7 @@ export async function updateJob(jobId, employerId, data) {
             job_type || null,
             experience_level || null,
             status || null,
+            role_id !== undefined && role_id !== null ? Number(role_id) : null,
             jobId,
             employerId,
             data.role || ''
@@ -609,3 +632,199 @@ export async function updateApplicationStatus(applicationId, employerId, status)
     );
     return res.rows[0] || null;
 }
+
+// ============================================================
+// ADMIN MODULE QUERIES
+// ============================================================
+
+export async function getAdminStats() {
+    const [jobsRes, appsRes, hiredRes, rejectedRes, empsRes, seekersRes] = await Promise.all([
+        query(`SELECT COUNT(*)::int as count FROM jobs`),
+        query(`SELECT COUNT(*)::int as count FROM applications`),
+        query(`SELECT COUNT(*)::int as count FROM applications WHERE status = 'HIRED'`),
+        query(`SELECT COUNT(*)::int as count FROM applications WHERE status = 'REJECTED'`),
+        query(`SELECT COUNT(*)::int as count FROM users WHERE role = 'EMPLOYER'`),
+        query(`SELECT COUNT(*)::int as count FROM users WHERE role = 'JOB_SEEKER'`),
+    ]);
+
+    return {
+        totalJobs: jobsRes.rows[0]?.count || 0,
+        totalApplications: appsRes.rows[0]?.count || 0,
+        totalHired: hiredRes.rows[0]?.count || 0,
+        totalRejected: rejectedRes.rows[0]?.count || 0,
+        totalEmployers: empsRes.rows[0]?.count || 0,
+        totalJobSeekers: seekersRes.rows[0]?.count || 0,
+    };
+}
+
+export async function getAdminCompanies() {
+    const sql = `
+        SELECT 
+            u.user_id,
+            u.name as employer_name,
+            u.email as employer_email,
+            u.created_at as joined_at,
+            ep.company_name,
+            ep.company_description,
+            ep.website,
+            ep.logo_url,
+            ep.industry,
+            ep.location,
+            COUNT(DISTINCT j.job_id)::int as total_jobs_posted,
+            COUNT(DISTINCT a.application_id)::int as total_applications_received,
+            COUNT(DISTINCT CASE WHEN a.status = 'HIRED' THEN a.application_id END)::int as total_hired,
+            COUNT(DISTINCT CASE WHEN a.status = 'REJECTED' THEN a.application_id END)::int as total_rejected
+        FROM users u
+        LEFT JOIN employer_profiles ep ON u.user_id = ep.user_id
+        LEFT JOIN jobs j ON u.user_id = j.employer_id
+        LEFT JOIN applications a ON j.job_id = a.job_id
+        WHERE u.role = 'EMPLOYER'
+        GROUP BY u.user_id, u.name, u.email, u.created_at, ep.company_name, ep.company_description, ep.website, ep.logo_url, ep.industry, ep.location
+        ORDER BY total_jobs_posted DESC, u.created_at DESC
+    `;
+    const res = await query(sql);
+    return res.rows;
+}
+
+export async function getAdminRejectedCandidates() {
+    const sql = `
+        SELECT 
+            a.application_id,
+            a.job_id,
+            a.user_id,
+            a.resume_url,
+            a.cover_letter,
+            a.status,
+            a.applied_at,
+            a.updated_at as rejected_at,
+            j.title as job_title,
+            j.location as job_location,
+            j.mode as job_mode,
+            COALESCE(ep.company_name, u_emp.name) as company_name,
+            u_emp.email as employer_email,
+            u_cand.name as candidate_name,
+            u_cand.email as candidate_email,
+            up.phone as candidate_phone,
+            up.location as candidate_location,
+            up.resume_url as profile_resume_url,
+            up.linkedin_url as candidate_linkedin
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.job_id
+        JOIN users u_emp ON j.employer_id = u_emp.user_id
+        LEFT JOIN employer_profiles ep ON j.employer_id = ep.user_id
+        JOIN users u_cand ON a.user_id = u_cand.user_id
+        LEFT JOIN user_profiles up ON u_cand.user_id = up.user_id
+        WHERE a.status = 'REJECTED'
+        ORDER BY a.updated_at DESC
+    `;
+    const res = await query(sql);
+    return res.rows;
+}
+
+export async function getAdminJobs() {
+    const sql = `
+        SELECT 
+            j.job_id,
+            j.employer_id,
+            j.role_id,
+            r.role_name,
+            j.title,
+            j.description,
+            j.location,
+            j.min_salary,
+            j.max_salary,
+            j.mode,
+            j.job_type,
+            j.experience_level,
+            j.status,
+            j.created_at,
+            j.updated_at,
+            u.name as employer_name,
+            u.email as employer_email,
+            COALESCE(ep.company_name, u.name) as company_name,
+            ep.logo_url as company_logo,
+            COUNT(DISTINCT a.application_id)::int as application_count,
+            COUNT(DISTINCT CASE WHEN a.status = 'HIRED' THEN a.application_id END)::int as hired_count,
+            COUNT(DISTINCT CASE WHEN a.status = 'REJECTED' THEN a.application_id END)::int as rejected_count
+        FROM jobs j
+        JOIN users u ON j.employer_id = u.user_id
+        LEFT JOIN roles r ON j.role_id = r.role_id
+        LEFT JOIN employer_profiles ep ON j.employer_id = ep.user_id
+        LEFT JOIN applications a ON j.job_id = a.job_id
+        GROUP BY j.job_id, j.employer_id, j.role_id, r.role_name, j.title, j.description, j.location, j.min_salary, j.max_salary, j.mode, j.job_type, j.experience_level, j.status, j.created_at, j.updated_at, u.name, u.email, ep.company_name, ep.logo_url
+        ORDER BY j.created_at DESC
+    `;
+    const res = await query(sql);
+    return res.rows;
+}
+
+export async function getAdminTimeline() {
+    const sql = `
+        SELECT * FROM (
+            SELECT 
+                a.application_id::text as id,
+                CASE 
+                    WHEN a.status = 'HIRED' THEN 'HIRED'
+                    WHEN a.status = 'REJECTED' THEN 'REJECTED'
+                    ELSE 'APPLIED'
+                END as event_type,
+                u.name as actor_name,
+                u.email as actor_email,
+                j.title as target_title,
+                COALESCE(ep.company_name, u_emp.name) as company_name,
+                a.status::text as status,
+                CASE 
+                    WHEN a.status IN ('HIRED', 'REJECTED') THEN a.updated_at
+                    ELSE a.applied_at
+                END as event_time
+            FROM applications a
+            JOIN users u ON a.user_id = u.user_id
+            JOIN jobs j ON a.job_id = j.job_id
+            JOIN users u_emp ON j.employer_id = u_emp.user_id
+            LEFT JOIN employer_profiles ep ON j.employer_id = ep.user_id
+
+            UNION ALL
+
+            SELECT 
+                j.job_id::text as id,
+                'JOB_POSTED' as event_type,
+                u.name as actor_name,
+                u.email as actor_email,
+                j.title as target_title,
+                COALESCE(ep.company_name, u.name) as company_name,
+                j.status::text as status,
+                j.created_at as event_time
+            FROM jobs j
+            JOIN users u ON j.employer_id = u.user_id
+            LEFT JOIN employer_profiles ep ON j.employer_id = ep.user_id
+
+            UNION ALL
+
+            SELECT 
+                u.user_id::text as id,
+                'ORG_REGISTERED' as event_type,
+                u.name as actor_name,
+                u.email as actor_email,
+                'Joined Platform' as target_title,
+                COALESCE(ep.company_name, u.name) as company_name,
+                u.role::text as status,
+                u.created_at as event_time
+            FROM users u
+            LEFT JOIN employer_profiles ep ON u.user_id = ep.user_id
+            WHERE u.role = 'EMPLOYER'
+        ) AS timeline
+        ORDER BY event_time DESC
+        LIMIT 100
+    `;
+    const res = await query(sql);
+    return res.rows;
+}
+
+export async function deleteOrganizationByAdmin(userId) {
+    const res = await query(
+        `DELETE FROM users WHERE user_id = $1 AND role = 'EMPLOYER' RETURNING user_id, name, email`,
+        [userId]
+    );
+    return res.rows[0] || null;
+}
+

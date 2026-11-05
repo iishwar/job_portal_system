@@ -59,6 +59,7 @@ export async function POST(request) {
 
         const body = await request.json();
         const {
+            role_id,
             title,
             description,
             location,
@@ -79,6 +80,7 @@ export async function POST(request) {
 
         const newJob = await createJob({
             employer_id: userId,
+            role_id: role_id || null,
             title,
             description,
             location,
