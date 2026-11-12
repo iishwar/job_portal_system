@@ -1104,8 +1104,8 @@ function Navbar({ user, savedJobsCount, applicationsCount, onOpenSavedJobs, onOp
                                 <Bookmark size={15} /> Saved Jobs
                                 {savedJobsCount > 0 && <span className="badge">{savedJobsCount}</span>}
                             </button>
-                            <button className="nav__link-btn" onClick={onOpenApplications}>
-                                <FileText size={15} /> My Applications
+                            <button className="nav__link-btn" onClick={() => router.push('/my-applications')}>
+                                <FileText size={15} /> Applications Tracker
                                 {applicationsCount > 0 && <span className="badge" style={{ background: 'var(--emerald-soft)', color: 'var(--emerald)' }}>{applicationsCount}</span>}
                             </button>
                         </>
@@ -1177,11 +1177,11 @@ function Navbar({ user, savedJobsCount, applicationsCount, onOpenSavedJobs, onOp
                                             className="profile__dropdown-item"
                                             onClick={() => {
                                                 setDropdownOpen(false);
-                                                onOpenApplications();
+                                                router.push('/my-applications');
                                             }}
                                         >
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FileText size={16} /> My Applications
+                                                <FileText size={16} /> Applications Tracker
                                             </span>
                                             <span className="badge">{applicationsCount}</span>
                                         </button>
@@ -2071,6 +2071,7 @@ function SavedJobsModal({ savedJobs, appliedJobIds, onClose, onRemoveSaved, onAp
 }
 
 function ApplicationsModal({ applications, onClose }) {
+    const router = useRouter();
     return (
         <div className="modal__overlay" onClick={onClose}>
             <div className="modal__content" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
@@ -2085,6 +2086,18 @@ function ApplicationsModal({ applications, onClose }) {
                 </div>
 
                 <div className="modal__body" style={{ maxHeight: '440px', overflowY: 'auto' }}>
+                    <div style={{ marginBottom: '14px' }}>
+                        <button
+                            className="btn btn--primary"
+                            style={{ width: '100%', justifyContent: 'center', gap: '8px', padding: '10px' }}
+                            onClick={() => {
+                                onClose();
+                                router.push('/my-applications');
+                            }}
+                        >
+                            <ExternalLink size={15} /> Open Full Applications Tracker Page
+                        </button>
+                    </div>
                     {applications.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--ink-soft)' }}>
                             <FileText size={36} style={{ color: 'var(--ink-faint)', margin: '0 auto 12px' }} />
@@ -2627,7 +2640,7 @@ export default function HomePage() {
                 savedJobsCount={savedJobIds.length}
                 applicationsCount={applicationsList.length}
                 onOpenSavedJobs={() => setActiveModal('saved')}
-                onOpenApplications={() => setActiveModal('applications')}
+                onOpenApplications={() => router.push('/my-applications')}
                 onOpenSettings={() => setActiveModal('settings')}
                 onOpenPostJob={() => setActiveModal('post_job')}
                 onOpenEmployerJobs={() => setActiveModal('employer_dashboard')}

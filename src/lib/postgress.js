@@ -550,12 +550,19 @@ export async function getApplicationsByUser(userId) {
             a.applied_at,
             a.updated_at,
             j.title as job_title,
+            j.description as job_description,
             j.location as job_location,
             j.mode as job_mode,
+            j.job_type,
+            j.experience_level,
+            j.status as job_status,
             j.min_salary,
             j.max_salary,
             ep.company_name,
-            ep.logo_url as company_logo
+            ep.company_description,
+            ep.website as company_website,
+            ep.logo_url as company_logo,
+            ep.industry as company_industry
         FROM applications a
         JOIN jobs j ON a.job_id = j.job_id
         LEFT JOIN employer_profiles ep ON j.employer_id = ep.user_id
@@ -629,6 +636,16 @@ export async function updateApplicationStatus(applicationId, employerId, status)
            AND j.employer_id = $3
          RETURNING a.*`,
         [status, applicationId, employerId]
+    );
+    return res.rows[0] || null;
+}
+
+export async function deleteApplication(applicationId, userId) {
+    const res = await query(
+        `DELETE FROM applications 
+         WHERE application_id = $1 AND user_id = $2 
+         RETURNING *`,
+        [applicationId, userId]
     );
     return res.rows[0] || null;
 }

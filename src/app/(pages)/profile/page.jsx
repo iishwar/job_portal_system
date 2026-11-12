@@ -20,7 +20,8 @@ import {
   AlertCircle,
   Layers,
   Users,
-  Check
+  Check,
+  ExternalLink
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -221,6 +222,15 @@ export default function ProfilePage() {
           </div>
 
           <div className="profile-nav__right">
+            {user?.role !== "EMPLOYER" && (
+              <button 
+                className="nav__btn" 
+                style={{ background: "#EAF0FE", color: "#3B6FE0", border: "1px solid rgba(59, 111, 224, 0.2)", cursor: "pointer" }}
+                onClick={() => router.push("/my-applications")}
+              >
+                <FileText size={15} /> Applications Tracker
+              </button>
+            )}
             <button className="nav__btn nav__btn--logout" onClick={handleLogout}>
               <LogOut size={15} /> Log Out
             </button>
@@ -342,9 +352,16 @@ export default function ProfilePage() {
               </>
             ) : (
               <>
-                <div className="stat-card">
+                <div 
+                  className="stat-card"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => router.push("/my-applications")}
+                  title="Open Applications Tracker"
+                >
                   <span className="stat-card__val">{stats.appliedCount}</span>
-                  <span className="stat-card__lbl">Applications Submitted</span>
+                  <span className="stat-card__lbl" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    Applications Submitted <ExternalLink size={12} />
+                  </span>
                 </div>
                 <div className="stat-divider" />
                 <div className="stat-card">

@@ -5,6 +5,7 @@ import {
     getUserAppliedJobIds,
     createApplication,
     updateApplicationStatus,
+    deleteApplication,
 } from '@/lib/postgress';
 import { getSessionFromRequest } from '@/lib/auth';
 
@@ -22,17 +23,18 @@ export async function GET(request) {
 
         const { searchParams } = new URL(request.url);
         const idsOnly = searchParams.get('idsOnly') === 'true';
+        const view = searchParams.get('view');
 
         if (idsOnly) {
             const appliedJobIds = await getUserAppliedJobIds(userId);
             return NextResponse.json({ success: true, appliedJobIds }, { status: 200 });
         }
 
-        if (session.role === 'EMPLOYER') {
-            const applications = await getApplicationsForEmployer(userId);
+        if (view === 'seeker' || session.role !== 'EMPLOYER') {
+            const applications = await getApplicationsByUser(userId);
             return NextResponse.json({ success: true, applications }, { status: 200 });
         } else {
-            const applications = await getApplicationsByUser(userId);
+            const applications = await getApplicationsForEmployer(userId);
             return NextResponse.json({ success: true, applications }, { status: 200 });
         }
     } catch (err) {
@@ -144,6 +146,49 @@ export async function PATCH(request) {
         console.error('Applications PATCH Error:', err);
         return NextResponse.json(
             { success: false, error: 'Failed to update application status: ' + err.message },
+            { status: 500 }
+        );
+    }
+}
+
+export async function DELETE(request) {
+    try {
+        const session = await getSessionFromRequest(request);
+        const userId = session?.user_id || session?.id;
+
+        if (!session || !userId) {
+            return NextResponse.json(
+                { success: false, error: 'Unauthorized. Please log in.' },
+                { status: 401 }
+            );
+        }
+
+        const { searchParams } = new URL(request.url);
+        const applicationId = searchParams.get('id');
+
+        if (!applicationId) {
+            return NextResponse.json(
+                { success: false, error: 'Application ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const deleted = await deleteApplication(applicationId, userId);
+        if (!deleted) {
+            return NextResponse.json(
+                { success: false, error: 'Application not found or unauthorized' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json(
+            { success: true, message: 'Application withdrawn successfully' },
+            { status: 200 }
+        );
+    } catch (err) {
+        console.error('Applications DELETE Error:', err);
+        return NextResponse.json(
+            { success: false, error: 'Failed to withdraw application: ' + err.message },
             { status: 500 }
         );
     }
